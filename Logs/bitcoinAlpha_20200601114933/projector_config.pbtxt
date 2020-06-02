@@ -1,0 +1,272 @@
+embeddings {
+tensor_name: "default:00000"
+tensor_path: "00000/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00001"
+tensor_path: "00001/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00002"
+tensor_path: "00002/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00003"
+tensor_path: "00003/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00004"
+tensor_path: "00004/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00005"
+tensor_path: "00005/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00006"
+tensor_path: "00006/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00007"
+tensor_path: "00007/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00008"
+tensor_path: "00008/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00009"
+tensor_path: "00009/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00010"
+tensor_path: "00010/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00011"
+tensor_path: "00011/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00012"
+tensor_path: "00012/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00013"
+tensor_path: "00013/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00014"
+tensor_path: "00014/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00015"
+tensor_path: "00015/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00016"
+tensor_path: "00016/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00017"
+tensor_path: "00017/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00018"
+tensor_path: "00018/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00019"
+tensor_path: "00019/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00020"
+tensor_path: "00020/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00021"
+tensor_path: "00021/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00022"
+tensor_path: "00022/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00023"
+tensor_path: "00023/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00024"
+tensor_path: "00024/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00025"
+tensor_path: "00025/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00026"
+tensor_path: "00026/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00027"
+tensor_path: "00027/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00028"
+tensor_path: "00028/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00029"
+tensor_path: "00029/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00030"
+tensor_path: "00030/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00031"
+tensor_path: "00031/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00032"
+tensor_path: "00032/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00033"
+tensor_path: "00033/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00034"
+tensor_path: "00034/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00035"
+tensor_path: "00035/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00036"
+tensor_path: "00036/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00037"
+tensor_path: "00037/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00038"
+tensor_path: "00038/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00039"
+tensor_path: "00039/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00040"
+tensor_path: "00040/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00041"
+tensor_path: "00041/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00042"
+tensor_path: "00042/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00043"
+tensor_path: "00043/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00044"
+tensor_path: "00044/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00045"
+tensor_path: "00045/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00046"
+tensor_path: "00046/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00047"
+tensor_path: "00047/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00048"
+tensor_path: "00048/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00049"
+tensor_path: "00049/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00050"
+tensor_path: "00050/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00051"
+tensor_path: "00051/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00052"
+tensor_path: "00052/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00053"
+tensor_path: "00053/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00054"
+tensor_path: "00054/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00055"
+tensor_path: "00055/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00056"
+tensor_path: "00056/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00057"
+tensor_path: "00057/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00058"
+tensor_path: "00058/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00059"
+tensor_path: "00059/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00060"
+tensor_path: "00060/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00061"
+tensor_path: "00061/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00062"
+tensor_path: "00062/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00063"
+tensor_path: "00063/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00064"
+tensor_path: "00064/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00065"
+tensor_path: "00065/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00066"
+tensor_path: "00066/default/tensors.tsv"
+}
+embeddings {
+tensor_name: "default:00067"
+tensor_path: "00067/default/tensors.tsv"
+}

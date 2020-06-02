@@ -1,0 +1,4 @@
+embeddings {
+tensor_name: "default:00009"
+tensor_path: "00009/default/tensors.tsv"
+}
