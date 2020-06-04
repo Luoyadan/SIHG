@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+
 class LayerEncoder(nn.Module):
     def __init__(self, _id, adj_lists_pos, adj_lists_neg, aggregator,
                  num_sample=10, base_model=None, cuda=False, last_layer=False):

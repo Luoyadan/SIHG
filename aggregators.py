@@ -10,7 +10,6 @@ import torch.nn as nn
 
 from layers import SpGraphAttentionLayer
 
-
 class NonFirstLayerAggregator(nn.Module):
     def __init__(self, _id, features, cuda=False, in_feat_dim=32, out_feat_dim=32, nheads=1):
         super(NonFirstLayerAggregator, self).__init__()

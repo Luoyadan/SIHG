@@ -9,15 +9,19 @@ from __future__ import print_function
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, f1_score
 from torch.nn import init
-
+from collections import OrderedDict
 from random import randint
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import warnings
+from encoders import LayerEncoder
+from aggregators import FirstLayerAggregator, NonFirstLayerAggregator
 
 warnings.filterwarnings("ignore")
+
+
 
 
 ################################################################################
@@ -36,7 +40,6 @@ class SNEA(nn.Module):
             self.CrossEntLoss = nn.CrossEntropyLoss(
                 weight=torch.FloatTensor(class_weights)
             )
-        # self.triplet = nn.TripletMarginLoss(margin=1.5, p=2)
         self.structural_distance = nn.PairwiseDistance(p=2)
         self.weight = nn.Parameter(torch.FloatTensor(final_in_dim, final_in_dim))
         self.param_src = nn.Parameter(torch.FloatTensor(2 * final_out_dim, 3))
@@ -141,8 +144,6 @@ class SNEA(nn.Module):
                 - self.structural_distance(final_embedding[i_loss2], final_embedding[no_neg_loss2]) ** 2
             )
         )
-
-        # loss_structure = self.triplet(final_embedding[i_loss2], final_embedding[pos_no_loss2], final_embedding[no_neg_loss2])
 
         return loss_entropy + self.lambda_structure * loss_structure, final_embedding
 
