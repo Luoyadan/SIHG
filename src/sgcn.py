@@ -22,12 +22,7 @@ from torch_geometric.nn.models import SignedGCN
 
 
 class SignedGraphConvolutionalNetwork(torch.nn.Module):
-    """
-    Signed Graph Convolutional Network Class.
-    For details see: Signed Graph Convolutional Network.
-    Tyler Derr, Yao Ma, and Jiliang Tang ICDM, 2018.
-    https://arxiv.org/abs/1808.06354
-    """
+
     def __init__(self, device, args, X):
         super(SignedGraphConvolutionalNetwork, self).__init__()
         """

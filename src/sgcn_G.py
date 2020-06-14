@@ -1,5 +1,3 @@
-"""SGCN runner."""
-
 import time
 import torch
 import torch.nn as nn
@@ -47,7 +45,7 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
         self.neurons = self.args.layers
         self.layers = len(self.neurons)
 
-        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=4).to(self.device)
+        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers).to(self.device)
 
 
     def forward(self, positive_edges, negative_edges, target):
@@ -86,6 +84,7 @@ class SignedGCNTrainer(object):
         """
         self.logs = {}
         self.logs["parameters"] = vars(self.args)
+        self.logs["loss"] = []
         self.logs["performance"] = [["Epoch", "AUC", "F1"]]
         self.logs["training_time"] = [["Epoch", "Seconds"]]
 
@@ -94,10 +93,12 @@ class SignedGCNTrainer(object):
         Creating train and test split.
         """
         self.positive_edges, self.test_positive_edges = train_test_split(self.edges["positive_edges"],
-                                                                         test_size=self.args.test_size)
+                                                                         test_size=self.args.test_size,
+                                                                         random_state=self.args.seed)
 
         self.negative_edges, self.test_negative_edges = train_test_split(self.edges["negative_edges"],
-                                                                         test_size=self.args.test_size)
+                                                                         test_size=self.args.test_size,
+                                                                         random_state=self.args.seed)
         self.ecount = len(self.positive_edges + self.negative_edges)
 
         self.X = setup_features(self.args,
@@ -113,7 +114,7 @@ class SignedGCNTrainer(object):
 
         self.y = np.array([0 if i < int(self.ecount/2) else 1 for i in range(self.ecount)]+[2]*(self.ecount*2))
         self.y = torch.from_numpy(self.y).type(torch.LongTensor).to(self.device)
-        self.X = torch.from_numpy(self.X).float().to(self.device)
+        self.X = self.X.to(self.device)
 
 
     def score_model(self, epoch):
@@ -144,6 +145,7 @@ class SignedGCNTrainer(object):
             start_time = time.time()
             self.optimizer.zero_grad()
             loss, _ = self.model(self.positive_edges, self.negative_edges, self.y)
+            self.logs["loss"].append(loss.item())
             loss.backward()
             self.epochs.set_description("SGCN (Loss=%g)" % round(loss.item(), 4))
             self.optimizer.step()

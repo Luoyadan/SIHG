@@ -7,7 +7,11 @@ from scipy import sparse
 from texttable import Texttable
 from sklearn.decomposition import TruncatedSVD, KernelPCA
 from sklearn.metrics import roc_auc_score, f1_score
-
+import torch
+import scipy
+from torch_sparse import coalesce
+from tensorboardX import SummaryWriter
+import datetime
 def read_graph(args):
     """
     Method to read graph and create a target matrix with pooled adjacency matrix powers.
@@ -68,8 +72,15 @@ def save_logs(args, logs):
     :param args: Arguments objects.
     :param logs: Log dictionary.
     """
-    with open(args.log_path, "w") as f:
-        json.dump(logs, f)
+    writer = SummaryWriter(args.log_path + args.dataset + '_Layer_{}/'.format(args.num_layers)+'_{}'.format((datetime.datetime.now()).strftime("%Y%m%d%H%M%S")))
+    for i, item in enumerate(logs["performance"]):
+        if i > 0:
+            writer.add_scalar('AUC', item[1], item[0])
+            writer.add_scalar('F1', item[2], item[0])
+            writer.add_scalar('Loss', logs["loss"][i-1], item[0])
+    writer.close()
+    # with open(args.log_path, "w") as f:
+    #     json.dump(logs, f)
 
 def setup_features(args, positive_edges, negative_edges, node_count):
     """
@@ -95,37 +106,78 @@ def create_general_features(args):
     X = np.array(pd.read_csv(args.features_path))
     return X
 
-def create_spectral_features(args, positive_edges, negative_edges, node_count):
-    """
-    Creating spectral node features using the train dataset edges.
-    :param args: Arguments object.
-    :param positive_edges: Positive edges list.
-    :param negative_edges: Negative edges list.
-    :param node_count: Number of nodes.
-    :return X: Node features.
-    """
-    dec = 'TSVD' # 'KPCA'
-    p_edges = positive_edges + [[edge[1], edge[0]] for edge in positive_edges]
-    n_edges = negative_edges + [[edge[1], edge[0]] for edge in negative_edges]
-    train_edges = p_edges + n_edges
-    index_1 = [edge[0] for edge in train_edges]
-    index_2 = [edge[1] for edge in train_edges]
-    values = [1]*len(p_edges) + [-1]*len(n_edges)
-    shaping = (node_count, node_count)
-    signed_A = sparse.csr_matrix(sparse.coo_matrix((values, (index_1, index_2)),
-                                                   shape=shaping,
-                                                   dtype=np.float32))
+def create_spectral_features(args, pos_edge_index, neg_edge_index,
+                             num_nodes=None):
+    r"""Creates :obj:`in_channels` spectral node features based on
+    positive and negative edges.
 
-    if dec == 'TSVD':
-        svd = TruncatedSVD(n_components=args.reduction_dimensions,
+    Args:
+        pos_edge_index (LongTensor): The positive edge indices.
+        neg_edge_index (LongTensor): The negative edge indices.
+        num_nodes (int, optional): The number of nodes, *i.e.*
+            :obj:`max_val + 1` of :attr:`pos_edge_index` and
+            :attr:`neg_edge_index`. (default: :obj:`None`)
+    """
+    pos_edge_index = torch.tensor(pos_edge_index).t().long()
+    neg_edge_index = torch.tensor(neg_edge_index).t().long()
+    edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
+    N = edge_index.max().item() + 1 # if num_nodes is None else num_nodes
+    edge_index = edge_index.to(torch.device('cpu')).long()
+
+    pos_val = torch.full((pos_edge_index.size(1), ), 2, dtype=torch.float)
+    neg_val = torch.full((neg_edge_index.size(1), ), 0, dtype=torch.float)
+    val = torch.cat([pos_val, neg_val], dim=0)
+
+    row, col = edge_index
+    edge_index = torch.cat([edge_index, torch.stack([col, row])], dim=1)
+    val = torch.cat([val, val], dim=0)
+
+    edge_index, val = coalesce(edge_index, val, N, N)
+    val = val - 1
+
+    # Borrowed from:
+    # https://github.com/benedekrozemberczki/SGCN/blob/master/src/utils.py
+    edge_index = edge_index.detach().numpy()
+    val = val.detach().numpy()
+    A = scipy.sparse.coo_matrix((val, edge_index), shape=(N, N))
+    svd = TruncatedSVD(n_components=args.reduction_dimensions,
                            n_iter=args.reduction_iterations,
                            random_state=args.seed)
-        svd.fit(signed_A)
-        X = svd.components_.T
+    svd.fit(A)
+    x = svd.components_.T
+    return torch.from_numpy(x).to(torch.float).to(pos_edge_index.device)
 
-    elif dec == 'KPCA':
-        transformer = KernelPCA(n_components=args.reduction_dimensions,
-                                kernel='rbf',
-                                random_state=args.seed)
-        X = transformer.fit_transform(signed_A)
-    return X
+# def create_spectral_features(args, positive_edges, negative_edges, node_count):
+#     """
+#     Creating spectral node features using the train dataset edges.
+#     :param args: Arguments object.
+#     :param positive_edges: Positive edges list.
+#     :param negative_edges: Negative edges list.
+#     :param node_count: Number of nodes.
+#     :return X: Node features.
+#     """
+#     dec = 'TSVD' # 'KPCA'
+#     p_edges = positive_edges + [[edge[1], edge[0]] for edge in positive_edges]
+#     n_edges = negative_edges + [[edge[1], edge[0]] for edge in negative_edges]
+#     train_edges = p_edges + n_edges
+#     index_1 = [edge[0] for edge in train_edges]
+#     index_2 = [edge[1] for edge in train_edges]
+#     values = [1]*len(p_edges) + [-1]*len(n_edges)
+#     shaping = (node_count, node_count)
+#     signed_A = sparse.csr_matrix(sparse.coo_matrix((values, (index_1, index_2)),
+#                                                    shape=shaping,
+#                                                    dtype=np.float32))
+#
+#     if dec == 'TSVD':
+#         svd = TruncatedSVD(n_components=args.reduction_dimensions,
+#                            n_iter=args.reduction_iterations,
+#                            random_state=args.seed)
+#         svd.fit(signed_A)
+#         X = svd.components_.T
+#
+#     elif dec == 'KPCA':
+#         transformer = KernelPCA(n_components=args.reduction_dimensions,
+#                                 kernel='rbf',
+#                                 random_state=args.seed)
+#         X = transformer.fit_transform(signed_A)
+#     return X

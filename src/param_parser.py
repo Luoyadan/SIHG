@@ -10,12 +10,16 @@ def parameter_parser():
     parser = argparse.ArgumentParser(description="Run SGCN.")
 
     dataset_list = ['bitcoin_alpha', 'bitcoin_otc', 'epinions', 'slashdot']
-    dataset = dataset_list[2]
+    dataset = dataset_list[0]
 
     if 'bitcoin' in dataset:
         edge_path = "../input/" + dataset + ".csv"
     else:
         edge_path = "../input/" + dataset + ".txt"
+
+    parser.add_argument("--dataset",
+                        type=str,
+                        default=dataset)
     parser.add_argument("--edge-path",
                         nargs="?",
                         default=edge_path,
@@ -26,9 +30,11 @@ def parameter_parser():
                         default=edge_path,
 	                help="Edge list csv.")
 
+    parser.add_argument("--log_path", type=str, default='./logs/')
+
     parser.add_argument("--epochs",
                         type=int,
-                        default=100,
+                        default=1000,
 	                help="Number of training epochs. Default is 100.")
 
     parser.add_argument("--reduction-iterations",
@@ -40,7 +46,9 @@ def parameter_parser():
                         type=int,
                         default=64,
 	                help="Number of SVD feature extraction dimensions. Default is 64.")
-
+    parser.add_argument("--num_layers",
+                        type=int,
+                        default=3)
     parser.add_argument("--seed",
                         type=int,
                         default=42,

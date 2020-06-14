@@ -2,13 +2,31 @@ import scipy.sparse
 from sklearn.decomposition import TruncatedSVD
 from sklearn.metrics import roc_auc_score, f1_score
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch_sparse import coalesce
 from signed_conv import SignedConv
-
+from sklearn.metrics import normalized_mutual_info_score
 from torch_geometric.utils import (negative_sampling,
                                    structured_negative_sampling)
 
+class InfoNet(torch.nn.Module):
+    def __init__(self, hidden_channels):
+        super(InfoNet, self).__init__()
+        self.fc_x = nn.Linear(hidden_channels, hidden_channels)
+        self.fc_y = nn.Linear(1, hidden_channels)
+        self.fc = nn.Linear(hidden_channels, 1)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.fc_x.reset_parameters()
+        self.fc_y.reset_parameters()
+        self.fc.reset_parameters()
+
+    def forward(self, x, y):
+        out = F.relu(self.fc_x(x) + self.fc_y(y.unsqueeze(-1)))
+        out = self.fc(out)
+        return out
 
 class SignedGCN(torch.nn.Module):
     r"""The signed graph convolutional network model from the `"Signed Graph
@@ -26,7 +44,7 @@ class SignedGCN(torch.nn.Module):
             learn an additive bias. (default: :obj:`True`)
     """
 
-    def __init__(self, in_channels, hidden_channels, num_layers, lamb=5,
+    def __init__(self, in_channels, hidden_channels, num_layers, lamb=1,
                  bias=True):
         super(SignedGCN, self).__init__()
 
@@ -44,7 +62,7 @@ class SignedGCN(torch.nn.Module):
                            first_aggr=False))
 
         self.lin = torch.nn.Linear(2 * hidden_channels, 3)
-
+        self.info_net = InfoNet(2 * hidden_channels)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -69,44 +87,6 @@ class SignedGCN(torch.nn.Module):
 
         return train_edge_index, test_edge_index
 
-    def create_spectral_features(self, pos_edge_index, neg_edge_index,
-                                 num_nodes=None):
-        r"""Creates :obj:`in_channels` spectral node features based on
-        positive and negative edges.
-
-        Args:
-            pos_edge_index (LongTensor): The positive edge indices.
-            neg_edge_index (LongTensor): The negative edge indices.
-            num_nodes (int, optional): The number of nodes, *i.e.*
-                :obj:`max_val + 1` of :attr:`pos_edge_index` and
-                :attr:`neg_edge_index`. (default: :obj:`None`)
-        """
-
-        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
-        N = edge_index.max().item() + 1 if num_nodes is None else num_nodes
-        edge_index = edge_index.to(torch.device('cpu'))
-
-        pos_val = torch.full((pos_edge_index.size(1), ), 2, dtype=torch.float)
-        neg_val = torch.full((neg_edge_index.size(1), ), 0, dtype=torch.float)
-        val = torch.cat([pos_val, neg_val], dim=0)
-
-        row, col = edge_index
-        edge_index = torch.cat([edge_index, torch.stack([col, row])], dim=1)
-        val = torch.cat([val, val], dim=0)
-
-        edge_index, val = coalesce(edge_index, val, N, N)
-        val = val - 1
-
-        # Borrowed from:
-        # https://github.com/benedekrozemberczki/SGCN/blob/master/src/utils.py
-        edge_index = edge_index.detach().numpy()
-        val = val.detach().numpy()
-        A = scipy.sparse.coo_matrix((val, edge_index), shape=(N, N))
-        svd = TruncatedSVD(n_components=self.in_channels, n_iter=128)
-        svd.fit(A)
-        x = svd.components_.T
-        return torch.from_numpy(x).to(torch.float).to(pos_edge_index.device)
-
     def forward(self, x, pos_edge_index, neg_edge_index):
         """Computes node embeddings :obj:`z` based on positive edges
         :obj:`pos_edge_index` and negative edges :obj:`neg_edge_index`.
@@ -121,7 +101,7 @@ class SignedGCN(torch.nn.Module):
             z = F.relu(conv(z, pos_edge_index, neg_edge_index))
         return z
 
-    def discriminate(self, z, edge_index):
+    def discriminate(self, z, edge_index, id=None):
         """Given node embeddings :obj:`z`, classifies the link relation
         between node pairs :obj:`edge_index` to be either positive,
         negative or non-existent.
@@ -130,9 +110,45 @@ class SignedGCN(torch.nn.Module):
             x (Tensor): The input node features.
             edge_index (LongTensor): The edge indices.
         """
+        # test_a = z[edge_index[0]].detach().cpu().numpy()
+        # test_b = z[edge_index[1]].detach().cpu().numpy()
+        # mi = torch.tensor([normalized_mutual_info_score(test_a[i, :], test_b[i, :]) for i in range(edge_index.size()[1])])
+        # print('mutual info: max {}; min {}'.format(mi.max(), mi.min()))
         value = torch.cat([z[edge_index[0]], z[edge_index[1]]], dim=1)
+        if id is not None:
+            info_scores = self.info_net(value, id)
+            return info_scores
         value = self.lin(value)
         return torch.log_softmax(value, dim=1)
+
+    def mutual_loss(self, z, pos_edge_index, neg_edge_index):
+
+        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
+        none_edge_index = negative_sampling(edge_index, z.size(0))
+
+        pos_y = pos_edge_index.new_full((pos_edge_index.size(1), ), 0).float()
+        neg_y = neg_edge_index.new_full((neg_edge_index.size(1), ), 1).float()
+        neu_y = none_edge_index.new_full((none_edge_index.size(1), ), 2).float()
+        all_y = torch.cat((pos_y, neg_y, neu_y))
+        idx = torch.randperm(all_y.size()[0])
+        shuffle_y = all_y[idx]
+        index = torch.cat((pos_edge_index, neg_edge_index, none_edge_index), 1)
+        # neg_shuffle = all_y[idx][pos_edge_index.size(1):]
+        #
+        # pos_pred = self.discriminate(z, pos_edge_index, id=pos_y)
+        # pos_shuffle = self.discriminate(z, pos_edge_index, id=pos_shuffle)
+        # neg_pred = self.discriminate(z, neg_edge_index, id=neg_y)
+        # neg_shuffle = self.discriminate(z, neg_edge_index, id=neg_shuffle)
+        info_pred = self.discriminate(z, index, id=all_y)
+        info_shuffle = self.discriminate(z, index, id=shuffle_y)
+        # pos_loss = torch.mean(pos_pred) - torch.log(torch.mean(torch.exp(pos_shuffle)))
+        # neg_loss = torch.mean(neg_pred) - torch.log(torch.mean(torch.exp(neg_shuffle)))
+
+        # print("mutual loss: pos {}; neg {}".format(pos_loss, neg_loss))
+        mutual_loss = torch.mean(info_pred) - torch.log(torch.mean(torch.exp(info_shuffle)))
+        # print(mutual_loss.item())
+        return -mutual_loss
+
 
     def nll_loss(self, z, pos_edge_index, neg_edge_index):
         """Computes the discriminator loss based on node embeddings :obj:`z`,
@@ -194,10 +210,11 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
             neg_edge_index (LongTensor): The negative edge indices.
         """
+        mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
         nll_loss = self.nll_loss(z, pos_edge_index, neg_edge_index)
         loss_1 = self.pos_embedding_loss(z, pos_edge_index)
         loss_2 = self.neg_embedding_loss(z, neg_edge_index)
-        return nll_loss + self.lamb * (loss_1 + loss_2)
+        return 2* nll_loss + 0 * (loss_1 + loss_2) + 5 * mutual_info_loss
 
     def test(self, z, pos_edge_index, neg_edge_index):
         """Evaluates node embeddings :obj:`z` on positive and negative test
