@@ -10,24 +10,6 @@ from sklearn.metrics import normalized_mutual_info_score
 from torch_geometric.utils import (negative_sampling,
                                    structured_negative_sampling)
 
-class InfoNet(torch.nn.Module):
-    def __init__(self, hidden_channels):
-        super(InfoNet, self).__init__()
-        self.fc_x = nn.Linear(hidden_channels, hidden_channels)
-        self.fc_y = nn.Linear(1, hidden_channels)
-        self.fc = nn.Linear(hidden_channels, 1)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        self.fc_x.reset_parameters()
-        self.fc_y.reset_parameters()
-        self.fc.reset_parameters()
-
-    def forward(self, x, y):
-        out = F.relu(self.fc_x(x) + self.fc_y(y.unsqueeze(-1)))
-        out = self.fc(out)
-        return out
-
 class SignedGCN(torch.nn.Module):
     r"""The signed graph convolutional network model from the `"Signed Graph
     Convolutional Network" <https://arxiv.org/abs/1808.06354>`_ paper.
@@ -53,16 +35,16 @@ class SignedGCN(torch.nn.Module):
         self.num_layers = num_layers
         self.lamb = lamb
 
-        self.conv1 = SignedConv(in_channels, hidden_channels // 2,
+        self.conv1 = SignedConv(in_channels, hidden_channels//2,
                                 first_aggr=True)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 1):
             self.convs.append(
-                SignedConv(hidden_channels // 2, hidden_channels // 2,
+                SignedConv(hidden_channels//2, hidden_channels//2,
                            first_aggr=False))
 
-        self.lin = torch.nn.Linear(2 * hidden_channels, 3)
-        self.info_net = InfoNet(2 * hidden_channels)
+        self.lin = torch.nn.Linear(2*hidden_channels, 3)
+
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -96,9 +78,9 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
             neg_edge_index (LongTensor): The negative edge indices.
         """
-        z = F.relu(self.conv1(x, pos_edge_index, neg_edge_index))
+        z = torch.tanh(self.conv1(x, pos_edge_index, neg_edge_index))
         for conv in self.convs:
-            z = F.relu(conv(z, pos_edge_index, neg_edge_index))
+            z = torch.tanh(conv(z, pos_edge_index, neg_edge_index))
         return z
 
     def discriminate(self, z, edge_index, id=None):
@@ -115,9 +97,9 @@ class SignedGCN(torch.nn.Module):
         # mi = torch.tensor([normalized_mutual_info_score(test_a[i, :], test_b[i, :]) for i in range(edge_index.size()[1])])
         # print('mutual info: max {}; min {}'.format(mi.max(), mi.min()))
         value = torch.cat([z[edge_index[0]], z[edge_index[1]]], dim=1)
-        if id is not None:
-            info_scores = self.info_net(value, id)
-            return info_scores
+        # if id is not None:
+        #     info_scores = self.info_net(value, id)
+        #     return info_scores
         value = self.lin(value)
         return torch.log_softmax(value, dim=1)
 
@@ -171,10 +153,10 @@ class SignedGCN(torch.nn.Module):
         nll_loss += F.nll_loss(
             self.discriminate(z, neg_edge_index),
             neg_edge_index.new_full((neg_edge_index.size(1), ), 1))
-        nll_loss += F.nll_loss(
+        nll_loss += 0.5 * F.nll_loss(
             self.discriminate(z, none_edge_index),
             none_edge_index.new_full((none_edge_index.size(1), ), 2))
-        return nll_loss / 3.0
+        return nll_loss
 
     def pos_embedding_loss(self, z, pos_edge_index):
         """Computes the triplet loss between positive node pairs and sampled
@@ -210,11 +192,11 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
             neg_edge_index (LongTensor): The negative edge indices.
         """
-        mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
+        # mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
         nll_loss = self.nll_loss(z, pos_edge_index, neg_edge_index)
         loss_1 = self.pos_embedding_loss(z, pos_edge_index)
         loss_2 = self.neg_embedding_loss(z, neg_edge_index)
-        return 2* nll_loss + 0 * (loss_1 + loss_2) + 5 * mutual_info_loss
+        return nll_loss + 1 * (loss_1 + loss_2)
 
     def test(self, z, pos_edge_index, neg_edge_index):
         """Evaluates node embeddings :obj:`z` on positive and negative test
@@ -234,7 +216,7 @@ class SignedGCN(torch.nn.Module):
              pred.new_zeros(neg_p.size(0))])
         pred, y = pred.numpy(), y.numpy()
 
-        auc = roc_auc_score(y, pred)
+        auc = roc_auc_score(y, pred, average='macro')
         f1 = f1_score(y, pred, average='binary') if pred.sum() > 0 else 0
 
         return auc, f1

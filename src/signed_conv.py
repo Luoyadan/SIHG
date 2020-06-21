@@ -1,6 +1,16 @@
 import torch
 from torch.nn import Linear
+from message_passing import MessagePassing
+
+
+import torch
+from torch import Tensor
+from torch.nn import Parameter
+from torch_scatter import scatter_add
+from torch_sparse import SparseTensor, matmul, fill_diag, sum, mul_
 from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.utils import add_remaining_self_loops
+from torch_geometric.utils.num_nodes import maybe_num_nodes
 
 
 class SignedConv(MessagePassing):
@@ -72,16 +82,17 @@ class SignedConv(MessagePassing):
         self.lin_pos.reset_parameters()
         self.lin_neg.reset_parameters()
 
+
     def forward(self, x, pos_edge_index, neg_edge_index):
         """"""
-        random_keep = 1
-        pos_index = torch.randperm(pos_edge_index.size()[1])[:int(random_keep * pos_edge_index.size()[1])]
-        neg_index = torch.randperm(neg_edge_index.size()[1])[:int(random_keep * neg_edge_index.size()[1])]
+        # propagate_type: (x: Tensor)
         if self.first_aggr:
             assert x.size(1) == self.in_channels
 
-            x_pos = torch.cat([self.propagate(pos_edge_index[:, pos_index], x=x), x], dim=1)
-            x_neg = torch.cat([self.propagate(neg_edge_index[:, neg_index], x=x), x], dim=1)
+            x_pos = torch.cat(
+                [self.propagate(pos_edge_index, x=x, size=None), x], dim=1)
+            x_neg = torch.cat(
+                [self.propagate(neg_edge_index, x=x, size=None), x], dim=1)
 
         else:
             assert x.size(1) == 2 * self.in_channels
@@ -89,18 +100,16 @@ class SignedConv(MessagePassing):
             x_1, x_2 = x[:, :self.in_channels], x[:, self.in_channels:]
 
             x_pos = torch.cat([
-                self.propagate(pos_edge_index, x=x_1),
-                self.propagate(neg_edge_index, x=x_2),
+                self.propagate(pos_edge_index, x=x_1, size=None),
+                self.propagate(neg_edge_index, x=x_2, size=None),
                 x_1,
-            ],
-                              dim=1)
+            ], dim=1)
 
             x_neg = torch.cat([
-                self.propagate(pos_edge_index, x=x_2),
-                self.propagate(neg_edge_index, x=x_1),
+                self.propagate(pos_edge_index, x=x_2, size=None),
+                self.propagate(neg_edge_index, x=x_1, size=None),
                 x_2,
-            ],
-                              dim=1)
+            ], dim=1)
 
         return torch.cat([self.lin_pos(x_pos), self.lin_neg(x_neg)], dim=1)
 

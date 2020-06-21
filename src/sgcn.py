@@ -217,7 +217,7 @@ class SignedGCNTrainer(object):
 
         self.y = np.array([0 if i < int(self.ecount/2) else 1 for i in range(self.ecount)]+[2]*(self.ecount*2))
         self.y = torch.from_numpy(self.y).type(torch.LongTensor).to(self.device)
-        self.X = torch.from_numpy(self.X).float().to(self.device)
+        # self.X = torch.from_numpy(self.X).float().to(self.device)
 
     def score_model(self, epoch):
         """

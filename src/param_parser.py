@@ -34,7 +34,7 @@ def parameter_parser():
 
     parser.add_argument("--epochs",
                         type=int,
-                        default=1000,
+                        default=500,
 	                help="Number of training epochs. Default is 100.")
 
     parser.add_argument("--reduction-iterations",
@@ -46,9 +46,11 @@ def parameter_parser():
                         type=int,
                         default=64,
 	                help="Number of SVD feature extraction dimensions. Default is 64.")
+
     parser.add_argument("--num_layers",
                         type=int,
                         default=3)
+
     parser.add_argument("--seed",
                         type=int,
                         default=42,

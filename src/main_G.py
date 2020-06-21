@@ -1,6 +1,6 @@
 """SGCN runner."""
 
-from sgcn_G import SignedGCNTrainer
+from sgin import SignedGCNTrainer
 from param_parser import parameter_parser
 from utils import tab_printer, read_graph, score_printer, save_logs
 import os
@@ -9,7 +9,7 @@ import numpy as np
 import random
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="2"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 def main():
     """
     Parsing command line parameters.
