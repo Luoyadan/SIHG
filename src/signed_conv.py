@@ -79,7 +79,7 @@ class SignedConv(MessagePassing):
             self.lin_pos = Linear(3 * out_channels, out_channels, bias=bias)
             self.lin_neg = Linear(3 * out_channels, out_channels, bias=bias)
         self.manifolds = manifolds
-        self.dropout = 0.1
+        self.dropout = 0
         self.c = 1.
         if self.first_aggr:
             self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
@@ -103,10 +103,12 @@ class SignedConv(MessagePassing):
         pos_edge_index = add_remaining_self_loops(pos_edge_index, num_nodes=x.size(0))[0]
 
         x = self.manifolds.proj(self.manifolds.expmap0(self.manifolds.proj_tan0(x, self.c), c=self.c), c=self.c)
-        # drop_weight = F.dropout(self.weight, self.dropout, training=self.training)
-        # mv = self.manifolds.mobius_matvec(drop_weight, x, self.c)
-        # res = self.manifolds.proj(mv, self.c)
-        res = x
+        if self.manifolds.name is not 'PoincareBall':
+            drop_weight = F.dropout(self.weight, self.dropout, training=self.training)
+            mv = self.manifolds.mobius_matvec(drop_weight, x, self.c)
+            res = self.manifolds.proj(mv, self.c)
+        else:
+            res = x
         if torch.isnan(res).any():
             print("check here")
         assert not torch.isnan(res).any()

@@ -10,7 +10,6 @@ from utils import setup_features
 from sklearn.model_selection import train_test_split
 from torch_geometric.nn import MessagePassing
 from signed_gcn import SignedGCN
-from torch_geometric.nn import GNNExplainer
 import matplotlib.pyplot as plt
 
 
@@ -117,11 +116,7 @@ class SignedGCNTrainer(object):
         self.y = torch.from_numpy(self.y).type(torch.LongTensor).to(self.device)
         self.X = self.X.to(self.device)
 
-    def explain_model(self, node_idx):
-        explainer = GNNExplainer(self.model.aggregator, epochs=200)
-        node_feat_mask, edge_mask = explainer.explain_node(node_idx, self.X, self.positive_edges)
-        ax, G = explainer.visualize_subgraph(node_idx, self.positive_edges, edge_mask)
-        plt.show()
+
     def score_model(self, epoch):
         """
         Score the model on the test set edges in each epoch.

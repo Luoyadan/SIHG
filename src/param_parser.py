@@ -34,7 +34,7 @@ def parameter_parser():
 
     parser.add_argument("--log_path", type=str, default='./logs/')
 
-    parser.add_argument("--manifolds", type=str, default='PoincareBall', choices=['Euclidean', 'Hyperboloid', 'PoincareBall'])
+    parser.add_argument("--manifolds", type=str, default='Hyperboloid', choices=['Euclidean', 'Hyperboloid', 'PoincareBall'])
 
     parser.add_argument("--r",
                         type=float,
@@ -82,7 +82,7 @@ def parameter_parser():
 
     parser.add_argument("--learning-rate",
                         type=float,
-                        default=0.005,
+                        default=0.01,
                         help="Learning rate. Default is 0.01.")
 
     parser.add_argument("--weight-decay",

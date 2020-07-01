@@ -211,12 +211,12 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
             neg_edge_index (LongTensor): The negative edge indices.
         """
-        # mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
+        mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
         # orth_loss = self.orth_loss(device)
         nll_loss = self.nll_loss(z, pos_edge_index, neg_edge_index)
         loss_1 = self.pos_embedding_loss(z, pos_edge_index)
         loss_2 = self.neg_embedding_loss(z, neg_edge_index)
-        return nll_loss + 1 * (loss_1 + loss_2)
+        return nll_loss + 1 * (loss_1 + loss_2) + mutual_info_loss
 
     def test(self, z, pos_edge_index, neg_edge_index, neg_ratio):
         """Evaluates node embeddings :obj:`z` on positive and negative test
