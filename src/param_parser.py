@@ -1,5 +1,6 @@
 import argparse
 
+
 def parameter_parser():
     """
     A method to parse up command line parameters.
@@ -20,32 +21,45 @@ def parameter_parser():
     parser.add_argument("--dataset",
                         type=str,
                         default=dataset)
+
     parser.add_argument("--edge-path",
                         nargs="?",
                         default=edge_path,
-	                help="Edge list csv.")
+                        help="Edge list csv.")
 
     parser.add_argument("--features-path",
                         nargs="?",
                         default=edge_path,
-	                help="Edge list csv.")
+                        help="Edge list csv.")
 
     parser.add_argument("--log_path", type=str, default='./logs/')
 
+    parser.add_argument("--manifolds", type=str, default='PoincareBall', choices=['Euclidean', 'Hyperboloid', 'PoincareBall'])
+
+    parser.add_argument("--r",
+                        type=float,
+                        default=2.,
+                        help="fermi-dirac decoder parameter for lp")
+
+    parser.add_argument("--t",
+                        type=float,
+                        default=1.,
+                        help="fermi-dirac decoder parameter for lp")
+
     parser.add_argument("--epochs",
                         type=int,
-                        default=500,
-	                help="Number of training epochs. Default is 100.")
+                        default=2000,
+                        help="Number of training epochs. Default is 100.")
 
     parser.add_argument("--reduction-iterations",
                         type=int,
                         default=30,
-	                help="Number of SVD iterations. Default is 30.")
+                        help="Number of SVD iterations. Default is 30.")
 
     parser.add_argument("--reduction-dimensions",
                         type=int,
                         default=64,
-	                help="Number of SVD feature extraction dimensions. Default is 64.")
+                        help="Number of SVD feature extraction dimensions. Default is 64.")
 
     parser.add_argument("--num_layers",
                         type=int,
@@ -54,27 +68,27 @@ def parameter_parser():
     parser.add_argument("--seed",
                         type=int,
                         default=42,
-	                help="Random seed for sklearn pre-training. Default is 42.")
+                        help="Random seed for sklearn pre-training. Default is 42.")
 
     parser.add_argument("--lamb",
                         type=float,
                         default=1.0,
-	                help="Embedding regularization parameter. Default is 1.0.")
+                        help="Embedding regularization parameter. Default is 1.0.")
 
     parser.add_argument("--test-size",
                         type=float,
                         default=0.2,
-	                help="Test dataset size. Default is 0.2.")
+                        help="Test dataset size. Default is 0.2.")
 
     parser.add_argument("--learning-rate",
                         type=float,
-                        default=0.01,
-	                help="Learning rate. Default is 0.01.")
+                        default=0.005,
+                        help="Learning rate. Default is 0.01.")
 
     parser.add_argument("--weight-decay",
                         type=float,
-                        default=10**-5,
-	                help="Learning rate. Default is 10^-5.")
+                        default=10 ** -5,
+                        help="Learning rate. Default is 10^-5.")
 
     parser.add_argument("--layers",
                         nargs="+",

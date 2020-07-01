@@ -10,8 +10,8 @@ from utils import setup_features
 from sklearn.model_selection import train_test_split
 from torch_geometric.nn import MessagePassing
 from signed_gcn import SignedGCN
-
-
+from torch_geometric.nn import GNNExplainer
+import matplotlib.pyplot as plt
 
 
 
@@ -46,7 +46,7 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
         self.neurons = self.args.layers
         self.layers = len(self.neurons)
 
-        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers).to(self.device)
+        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers, args=self.args).to(self.device)
 
 
     def forward(self, positive_edges, negative_edges, target):
@@ -60,7 +60,7 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
         """
 
         self.z = self.aggregator.forward(self.X, positive_edges, negative_edges)
-        loss = self.aggregator.loss(self.z, positive_edges, negative_edges)
+        loss = self.aggregator.loss(self.z, positive_edges, negative_edges, self.device)
 
         return loss, self.z
 
@@ -101,7 +101,7 @@ class SignedGCNTrainer(object):
                                                                          test_size=self.args.test_size,
                                                                          random_state=self.args.seed)
         self.ecount = len(self.positive_edges + self.negative_edges)
-
+        self.neg_ratio = len(self.negative_edges) / self.ecount
         self.X = setup_features(self.args,
                                 self.positive_edges,
                                 self.negative_edges,
@@ -117,7 +117,11 @@ class SignedGCNTrainer(object):
         self.y = torch.from_numpy(self.y).type(torch.LongTensor).to(self.device)
         self.X = self.X.to(self.device)
 
-
+    def explain_model(self, node_idx):
+        explainer = GNNExplainer(self.model.aggregator, epochs=200)
+        node_feat_mask, edge_mask = explainer.explain_node(node_idx, self.X, self.positive_edges)
+        ax, G = explainer.visualize_subgraph(node_idx, self.positive_edges, edge_mask)
+        plt.show()
     def score_model(self, epoch):
         """
         Score the model on the test set edges in each epoch.
@@ -128,7 +132,7 @@ class SignedGCNTrainer(object):
         score_negative_edges = torch.from_numpy(np.array(self.test_negative_edges, dtype=np.int64).T).type(torch.long).to(self.device)
 
         loss, self.z = self.model(self.positive_edges, self.negative_edges, self.y)
-        auc, f1 = self.model.aggregator.test(self.z, score_positive_edges, score_negative_edges)
+        auc, f1 = self.model.aggregator.test(self.z, score_positive_edges, score_negative_edges, self.neg_ratio)
         self.logs["performance"].append([epoch+1, auc, f1])
 
     def create_and_train_model(self):

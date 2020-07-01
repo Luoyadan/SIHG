@@ -30,6 +30,7 @@ def main():
     trainer = SignedGCNTrainer(args, edges)
     trainer.setup_dataset()
     trainer.create_and_train_model()
+    trainer.explain_model(1)
     if args.test_size > 0:
         trainer.save_model()
         score_printer(trainer.logs)
