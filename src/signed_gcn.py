@@ -27,12 +27,13 @@ class SignedGCN(torch.nn.Module):
             learn an additive bias. (default: :obj:`True`)
     """
 
-    def __init__(self, in_channels, hidden_channels, num_layers, lamb=1, args=None,
+    def __init__(self, in_channels, hidden_channels, num_layers, lamb=1, trial=None, args=None,
                  bias=True):
         super(SignedGCN, self).__init__()
 
         self.in_channels = in_channels
         self.hidden_channels = hidden_channels
+        self.trial = trial
         self.num_layers = num_layers
         self.lamb = lamb
         self.args = args
@@ -211,12 +212,15 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
             neg_edge_index (LongTensor): The negative edge indices.
         """
+        alpha = self.trial.suggest_uniform("alpha", 0, 1)
+        beta = self.trial.suggest_uniform("beta", 0, 1)
+        gamma = self.trial.suggest_uniform("gamma", 0, 1)
         mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
         # orth_loss = self.orth_loss(device)
         nll_loss = self.nll_loss(z, pos_edge_index, neg_edge_index)
         loss_1 = self.pos_embedding_loss(z, pos_edge_index)
         loss_2 = self.neg_embedding_loss(z, neg_edge_index)
-        return nll_loss + 1 * (loss_1 + loss_2) + mutual_info_loss
+        return nll_loss + alpha * loss_1 + beta * loss_2 + gamma * mutual_info_loss
 
     def test(self, z, pos_edge_index, neg_edge_index, neg_ratio):
         """Evaluates node embeddings :obj:`z` on positive and negative test

@@ -48,7 +48,7 @@ def parameter_parser():
 
     parser.add_argument("--epochs",
                         type=int,
-                        default=2000,
+                        default=800,
                         help="Number of training epochs. Default is 100.")
 
     parser.add_argument("--reduction-iterations",

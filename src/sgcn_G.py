@@ -21,7 +21,7 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
     Tyler Derr, Yao Ma, and Jiliang Tang ICDM, 2018.
     https://arxiv.org/abs/1808.06354
     """
-    def __init__(self, device, args, X):
+    def __init__(self, device, args, trial, X):
         super(SignedGraphConvolutionalNetwork, self).__init__()
         """
         SGCN Initialization.
@@ -30,6 +30,7 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
         :param X: Node features.
         """
         self.args = args
+        self.trial = trial
         torch.manual_seed(self.args.seed)
         self.device = device
         self.X = X
@@ -45,7 +46,7 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
         self.neurons = self.args.layers
         self.layers = len(self.neurons)
 
-        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers, args=self.args).to(self.device)
+        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers, trial=self.trial, args=self.args).to(self.device)
 
 
     def forward(self, positive_edges, negative_edges, target):
@@ -128,19 +129,23 @@ class SignedGCNTrainer(object):
 
         loss, self.z = self.model(self.positive_edges, self.negative_edges, self.y)
         auc, f1 = self.model.aggregator.test(self.z, score_positive_edges, score_negative_edges, self.neg_ratio)
+        self.trial.report(auc, epoch+1)
         self.logs["performance"].append([epoch+1, auc, f1])
 
-    def create_and_train_model(self):
+    def create_and_train_model(self, trial):
         """
         Model training and scoring.
         """
         print("\nTraining started.\n")
-        self.model = SignedGraphConvolutionalNetwork(self.device, self.args, self.X).to(self.device)
+        self.trial = trial
+        self.model = SignedGraphConvolutionalNetwork(self.device, self.args, trial, self.X).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=self.args.learning_rate,
                                           weight_decay=self.args.weight_decay)
+        self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, self.args.epochs)
         self.model.train()
         self.epochs = trange(self.args.epochs, desc="Loss")
+
         for epoch in self.epochs:
             start_time = time.time()
             self.optimizer.zero_grad()
@@ -149,6 +154,7 @@ class SignedGCNTrainer(object):
             loss.backward()
             self.epochs.set_description("SGCN (Loss=%g)" % round(loss.item(), 4))
             self.optimizer.step()
+            self.lr_scheduler.step()
             self.logs["training_time"].append([epoch+1, time.time()-start_time])
             if self.args.test_size > 0:
                 self.score_model(epoch)
