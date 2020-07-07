@@ -189,7 +189,7 @@ class SignedConv(MessagePassing):
 
         alpha = (x_i * self.att_i).sum(-1) + (x_j * self.att_j).sum(-1)
         alpha = F.leaky_relu(alpha, self.negative_slope)
-        alpha = softmax(alpha, edge_index_i, size_i)
+        alpha = 2 * softmax(alpha, edge_index_i, size_i) - 1
 
         if return_attention_weights:
             self.__alpha__ = alpha

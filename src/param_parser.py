@@ -11,7 +11,7 @@ def parameter_parser():
     parser = argparse.ArgumentParser(description="Run SGCN.")
 
     dataset_list = ['bitcoin_alpha', 'bitcoin_otc', 'epinions', 'slashdot']
-    dataset = dataset_list[0]
+    dataset = dataset_list[1]
 
     if 'bitcoin' in dataset:
         edge_path = "../input/" + dataset + ".csv"
