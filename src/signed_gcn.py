@@ -174,7 +174,7 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
         """
         i, j, k = structured_negative_sampling(pos_edge_index, z.size(0))
-
+        torch.cuda.empty_cache()
         out = self.manifolds.sqdist(z[i], z[j], 1) - self.manifolds.sqdist(z[i], z[k], 1)
         if torch.isinf(out).any():
             print("check here")
@@ -189,20 +189,10 @@ class SignedGCN(torch.nn.Module):
             neg_edge_index (LongTensor): The negative edge indices.
         """
         i, j, k = structured_negative_sampling(neg_edge_index, z.size(0))
-
+        torch.cuda.empty_cache()
         out = self.manifolds.sqdist(z[i], z[k], 1) - self.manifolds.sqdist(z[i], z[j], 1)
         return torch.clamp(out, min=0).mean()
 
-    def orth_loss(self, device):
-        weight_pos = self.conv1.lin_pos.weight.data
-        weight_neg = self.conv1.lin_neg.weight.data
-        loss = torch.norm(weight_pos.mm(weight_neg.t()) - torch.eye(weight_pos.size(0)).to(device), dim=-1, p=1).mean()
-        for i in range(self.num_layers - 1):
-            weight_pos = self.convs[i].lin_pos.weight.data
-            weight_neg = self.convs[i].lin_neg.weight.data
-            loss += torch.norm(weight_pos.mm(weight_neg.t()) - torch.eye(weight_pos.size(0)).to(device), dim=-1, p=1).mean()
-        loss = loss / self.num_layers
-        return loss
 
     def loss(self, z, pos_edge_index, neg_edge_index, device):
         """Computes the overall objective.

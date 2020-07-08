@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     if auto_ml:
         study = optuna.create_study(direction="maximize")
-        study.optimize(main, n_trials=10)
+        study.optimize(main, n_trials=100)
         pruned_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]
         complete_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
 

@@ -96,7 +96,7 @@ class SignedConv(MessagePassing):
             self.bias = nn.Parameter(torch.Tensor(2 * out_channels))
             self.att_i = Parameter(torch.Tensor(1, self.heads, out_channels))
             self.att_j = Parameter(torch.Tensor(1, self.heads, out_channels))
-        self.use_bias = True
+        self.use_bias = False
         self.negative_slope = 0.2
         self.act = F.leaky_relu
         self.reset_parameters()
@@ -112,13 +112,13 @@ class SignedConv(MessagePassing):
         init.xavier_uniform_(self.weight, gain=math.sqrt(2))
         init.constant_(self.bias, 0)
 
-    def forward(self, x, pos_edge_index, neg_edge_index, return_attention_weights=True):
+    def forward(self, x, pos_edge_index, neg_edge_index, return_attention_weights=False):
         """"""
         # hyper linear
         pos_edge_index = add_remaining_self_loops(pos_edge_index, num_nodes=x.size(0))[0]
 
         x = self.manifolds.proj(self.manifolds.expmap0(self.manifolds.proj_tan0(x, self.c), c=self.c), c=self.c)
-        if self.manifolds.name is not 'PoincareBall':
+        if self.manifolds.name != 'PoincareBall':
             drop_weight = F.dropout(self.weight, self.dropout, training=self.training)
             mv = self.manifolds.mobius_matvec(drop_weight, x, self.c)
             res = self.manifolds.proj(mv, self.c)
@@ -133,16 +133,20 @@ class SignedConv(MessagePassing):
             hyp_bias = self.manifolds.proj(hyp_bias, self.c)
             res = self.manifolds.mobius_add(res, hyp_bias, c=self.c)
             res = self.manifolds.proj(res, self.c)
-        x = self.manifolds.logmap0(res, c=self.c)
+        torch.cuda.empty_cache()
+        x = (self.manifolds.logmap0(res, c=self.c)).cuda()
 
         if self.first_aggr:
             if self.manifolds.name == 'Hyperboloid':
                 assert x.size(1) == self.in_channels - 1
             else:
                 assert x.size(1) == self.in_channels
-
-            x_trans_pos = (self.lin_pos_agg(x), self.lin_pos_agg(x))
-            x_trans_neg = (self.lin_neg_agg(x), self.lin_neg_agg(x))
+            if return_attention_weights:
+                x_trans_pos = (self.lin_pos_agg(x), self.lin_pos_agg(x))
+                x_trans_neg = (self.lin_neg_agg(x), self.lin_neg_agg(x))
+            else:
+                x_trans_pos = x
+                x_trans_neg = x
             x_pos = torch.cat(
                 [self.propagate(pos_edge_index, x=x_trans_pos, size=None, return_attention_weights=return_attention_weights), x], dim=1)
             x_neg = torch.cat(
@@ -183,7 +187,8 @@ class SignedConv(MessagePassing):
     def message(self, x_i, x_j, edge_index_i, size_i,
                 return_attention_weights):
         # Compute attention coefficients.
-
+        if return_attention_weights is False:
+            return x_j
         x_i = x_i.view(-1, self.heads, self.out_channels)
         x_j = x_j.view(-1, self.heads, self.out_channels)
 

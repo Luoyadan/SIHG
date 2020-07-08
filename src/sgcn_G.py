@@ -46,7 +46,7 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
         self.neurons = self.args.layers
         self.layers = len(self.neurons)
 
-        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers, trial=self.trial, args=self.args).to(self.device)
+        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers, trial=self.trial, args=self.args).cuda()
 
 
     def forward(self, positive_edges, negative_edges, target):
@@ -76,7 +76,7 @@ class SignedGCNTrainer(object):
         """
         self.args = args
         self.edges = edges
-        self.device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:1,2" if torch.cuda.is_available() else "cpu")
         self.setup_logs()
 
     def setup_logs(self):
@@ -108,14 +108,14 @@ class SignedGCNTrainer(object):
                                 self.edges["ncount"])
 
         self.positive_edges = torch.from_numpy(np.array(self.positive_edges,
-                                                        dtype=np.int64).T).type(torch.long).to(self.device)
+                                                        dtype=np.int64).T).type(torch.long).cuda()
 
         self.negative_edges = torch.from_numpy(np.array(self.negative_edges,
-                                                        dtype=np.int64).T).type(torch.long).to(self.device)
+                                                        dtype=np.int64).T).type(torch.long).cuda()
 
         self.y = np.array([0 if i < int(self.ecount/2) else 1 for i in range(self.ecount)]+[2]*(self.ecount*2))
-        self.y = torch.from_numpy(self.y).type(torch.LongTensor).to(self.device)
-        self.X = self.X.to(self.device)
+        self.y = torch.from_numpy(self.y).type(torch.LongTensor).cuda()
+        self.X = self.X.cuda()
 
 
     def score_model(self, epoch):
@@ -124,8 +124,8 @@ class SignedGCNTrainer(object):
         :param epoch: Epoch number.
         """
 
-        score_positive_edges = torch.from_numpy(np.array(self.test_positive_edges, dtype=np.int64).T).type(torch.long).to(self.device)
-        score_negative_edges = torch.from_numpy(np.array(self.test_negative_edges, dtype=np.int64).T).type(torch.long).to(self.device)
+        score_positive_edges = torch.from_numpy(np.array(self.test_positive_edges, dtype=np.int64).T).type(torch.long).cuda()
+        score_negative_edges = torch.from_numpy(np.array(self.test_negative_edges, dtype=np.int64).T).type(torch.long).cuda()
 
         loss, self.z = self.model(self.positive_edges, self.negative_edges, self.y)
         auc, f1 = self.model.aggregator.test(self.z, score_positive_edges, score_negative_edges, self.neg_ratio)
@@ -138,7 +138,7 @@ class SignedGCNTrainer(object):
         """
         print("\nTraining started.\n")
         self.trial = trial
-        self.model = SignedGraphConvolutionalNetwork(self.device, self.args, trial, self.X).to(self.device)
+        self.model = SignedGraphConvolutionalNetwork(self.device, self.args, trial, self.X).cuda()
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=self.args.learning_rate,
                                           weight_decay=self.args.weight_decay)
