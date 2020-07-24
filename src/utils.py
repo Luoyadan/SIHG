@@ -53,7 +53,7 @@ def calculate_auc(targets, predictions, edges):
     neg_ratio = len(edges["negative_edges"])/edges["ecount"]
     targets_rev = [0 if target == 1 else 1 for target in targets] # turn the first indicator (1) to positive
     auc = roc_auc_score(targets_rev, predictions[:, 0])
-    f1 = f1_score(targets_rev, [1 if p > neg_ratio else 0 for p in predictions[:, 0]])
+    f1 = f1_score(targets_rev, [1 if p > neg_ratio else 0 for p in predictions[:, 0]], average='micro')
     # f1 = f1_score(targets, np.argmax(predictions, axis=1))
     return auc, f1
 

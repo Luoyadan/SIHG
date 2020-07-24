@@ -111,7 +111,6 @@ class SignedGCN(torch.nn.Module):
         return probs
 
     def mutual_loss(self, z, pos_edge_index, neg_edge_index):
-
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
         none_edge_index = negative_sampling(edge_index, z.size(0))
 
@@ -202,9 +201,11 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
             neg_edge_index (LongTensor): The negative edge indices.
         """
-        alpha = self.trial.suggest_uniform("alpha", 0, 1)
-        beta = self.trial.suggest_uniform("beta", 0, 1)
-        gamma = self.trial.suggest_uniform("gamma", 0, 1)
+        # alpha = self.trial.suggest_uniform("alpha", 0, 3)
+        alpha = 0.64
+        beta = 0.83
+        # gamma = self.trial.suggest_uniform("gamma", 0, 3)
+        gamma = 2.39
         mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
         # orth_loss = self.orth_loss(device)
         nll_loss = self.nll_loss(z, pos_edge_index, neg_edge_index)

@@ -112,7 +112,7 @@ class SignedConv(MessagePassing):
         init.xavier_uniform_(self.weight, gain=math.sqrt(2))
         init.constant_(self.bias, 0)
 
-    def forward(self, x, pos_edge_index, neg_edge_index, return_attention_weights=False):
+    def forward(self, x, pos_edge_index, neg_edge_index, return_attention_weights=True):
         """"""
         # hyper linear
         pos_edge_index = add_remaining_self_loops(pos_edge_index, num_nodes=x.size(0))[0]
@@ -141,12 +141,14 @@ class SignedConv(MessagePassing):
                 assert x.size(1) == self.in_channels - 1
             else:
                 assert x.size(1) == self.in_channels
+
             if return_attention_weights:
                 x_trans_pos = (self.lin_pos_agg(x), self.lin_pos_agg(x))
                 x_trans_neg = (self.lin_neg_agg(x), self.lin_neg_agg(x))
             else:
                 x_trans_pos = x
                 x_trans_neg = x
+
             x_pos = torch.cat(
                 [self.propagate(pos_edge_index, x=x_trans_pos, size=None, return_attention_weights=return_attention_weights), x], dim=1)
             x_neg = torch.cat(

@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import random
 import optuna
+import pickle
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
@@ -37,14 +38,16 @@ def main(trial=None):
         score_printer(trainer.logs)
         save_logs(args, trainer.logs)
 
-    return trainer.logs["performance"][-1][1] + trainer.logs["performance"][-1][2]
+    if trial.should_prune():
+                raise optuna.exceptions.TrialPruned()
+    return trainer.logs["performance"][-1][2] #+ trainer.logs["performance"][-1][2]
 
 if __name__ == "__main__":
     auto_ml = True
 
     if auto_ml:
         study = optuna.create_study(direction="maximize")
-        study.optimize(main, n_trials=100)
+        study.optimize(main, n_trials=1)
         pruned_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]
         complete_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
 
@@ -61,6 +64,8 @@ if __name__ == "__main__":
         print("  Params: ")
         for key, value in trial.params.items():
             print("    {}: {}".format(key, value))
+        
+        pickle.dump(study, open("params_bitcoin_alpha_F1.pkl", "wb"))
     else:
         main()
 
