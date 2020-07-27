@@ -11,7 +11,7 @@ def parameter_parser():
     parser = argparse.ArgumentParser(description="Run SGCN.")
 
     dataset_list = ['bitcoin_alpha', 'bitcoin_otc', 'epinions', 'slashdot']
-    dataset = dataset_list[1]
+    dataset = dataset_list[3]
 
     if 'bitcoin' in dataset:
         edge_path = "../input/" + dataset + ".csv"
@@ -82,7 +82,7 @@ def parameter_parser():
 
     parser.add_argument("--learning-rate",
                         type=float,
-                        default=0.01,
+                        default=0.005,
                         help="Learning rate. Default is 0.01.")
 
     parser.add_argument("--weight-decay",

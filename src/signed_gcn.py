@@ -104,14 +104,11 @@ class SignedGCN(torch.nn.Module):
             x (Tensor): The input node features.
             edge_index (LongTensor): The edge indices.
         """
-        emb_in = z[edge_index[0]]
-        emb_out = z[edge_index[1]]
-        if feat is True:
-            return torch.cat([emb_in, emb_out], dim=1)
-        sqdist = self.manifolds.sqdist(emb_in, emb_out, 1)
 
-        probs = torch.clamp_min(1. / (torch.exp((sqdist - self.r) / self.t) + 1.0), 0)
-        return probs
+        # if feat is True:
+        #     return self.manifolds.logmap0(torch.cat([z[edge_index[0]], z[edge_index[1]]], dim=1), c=1.0)
+
+        return torch.clamp_min(1. / (torch.exp((self.manifolds.sqdist(z[edge_index[0]], z[edge_index[1]], 1) - self.r) / self.t) + 1.0), 0)
 
     def mutual_loss(self, z, pos_edge_index, neg_edge_index):
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
@@ -205,10 +202,16 @@ class SignedGCN(torch.nn.Module):
             neg_edge_index (LongTensor): The negative edge indices.
         """
         # alpha = self.trial.suggest_uniform("alpha", 0, 3)
-        alpha = 0.65
-        beta = 0.82
         # gamma = self.trial.suggest_uniform("gamma", 0, 3)
-        gamma = 1.88
+
+        # OTC-best
+        # alpha = 0.65
+        # beta = 0.82
+        # gamma = 1.88
+
+        alpha = 0.64
+        beta = 0.83
+        gamma = 2.39
         mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
         # orth_loss = self.orth_loss(device)
         nll_loss = self.nll_loss(z, pos_edge_index, neg_edge_index)
@@ -225,28 +228,40 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
             neg_edge_index (LongTensor): The negative edge indices.
         """
+        # with torch.no_grad():
+        #     pos_p = self.discriminate(z, pos_edges, feat=True).cpu().numpy()
+        #     neg_p = self.discriminate(z, neg_edges, feat=True).cpu().numpy()
+        #     test_pos_p = self.discriminate(z, pos_edge_index, feat=True).cpu().numpy()
+        #     test_neg_p = self.discriminate(z, neg_edge_index, feat=True).cpu().numpy()
+        #
+        # p = np.concatenate((pos_p, neg_p))
+        # p_test = np.concatenate((test_pos_p, test_neg_p))
+        # y = np.concatenate((np.ones(pos_edges.size()[1]), np.zeros(neg_edges.size()[1])))
+        # test_y = np.concatenate((np.ones(pos_edge_index.size()[1]), np.zeros(neg_edge_index.size()[1])))
+        # lr = LogisticRegression(solver='lbfgs', max_iter=7600)
+        # lr.fit(p, y)
+        # test_y_score = lr.predict_proba(p_test)[:,1]
+        # test_y_pred = lr.predict(p_test)
+        # auc = roc_auc_score(test_y, test_y_score)
+        # f1_micro = f1_score(test_y, test_y_pred, average='micro')
+        # f1 = f1_score(test_y, test_y_pred)
+        # f1_macro = f1_score(test_y, test_y_pred, average='macro')
         with torch.no_grad():
-            pos_p = self.discriminate(z, pos_edges, feat=True).cpu().numpy()
-            neg_p = self.discriminate(z, neg_edges, feat=True).cpu().numpy()
-            test_pos_p = self.discriminate(z, pos_edge_index, feat=True).cpu().numpy()
-            test_neg_p = self.discriminate(z, neg_edge_index, feat=True).cpu().numpy()
+            pos_p = self.discriminate(z, pos_edge_index)
+            neg_p = self.discriminate(z, neg_edge_index)
+        pred = torch.cat([pos_p, neg_p]).cpu()
+        y = torch.cat(
+            [pred.new_ones((pos_p.size(0))),
+             pred.new_zeros(neg_p.size(0))])
+        pred, y = pred.numpy(), y.int().numpy()
 
-        p = np.concatenate((pos_p, neg_p))
-        p_test = np.concatenate((test_pos_p, test_neg_p))
-        y = np.concatenate((np.ones(pos_edges.size()[1]), np.zeros(neg_edges.size()[1])))
-        test_y = np.concatenate((np.ones(pos_edge_index.size()[1]), np.zeros(neg_edge_index.size()[1])))
-        lr = LogisticRegression(solver='lbfgs', max_iter=7600)
-        lr.fit(p, y)
-        test_y_score = lr.predict_proba(p_test)[:,1]
-        test_y_pred = lr.predict(p_test)
-        auc = roc_auc_score(test_y, test_y_score)
-        f1_micro = f1_score(test_y, test_y_pred, average='micro')
-        f1 = f1_score(test_y, test_y_pred)
-        f1_macro = f1_score(test_y, test_y_pred, average='macro')
+        auc = roc_auc_score(y, pred, average='weighted')
+        f1 = f1_score(y, [1 if p > neg_ratio else 0 for p in pred], average='binary')
+        f1_micro = f1_score(y, [1 if p > neg_ratio else 0 for p in pred], average='micro')
+        f1_macro = f1_score(y, [1 if p > neg_ratio else 0 for p in pred], average='macro')
+
         return auc, f1, f1_macro, f1_micro
 
-
-        return auc, f1_micro, f1, f1_macro
 
     def __repr__(self):
         return '{}({}, {}, num_layers={})'.format(self.__class__.__name__,
