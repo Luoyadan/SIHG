@@ -233,8 +233,10 @@ class SignedGCN(torch.nn.Module):
 
         auc = roc_auc_score(y, pred, average='weighted')
         f1 = f1_score(y, [1 if p > neg_ratio else 0 for p in pred], average='binary')
+        f1_micro = f1_score(y, [1 if p > neg_ratio else 0 for p in pred], average='micro')
+        f1_macro = f1_score(y, [1 if p > neg_ratio else 0 for p in pred], average='macro')
 
-        return auc, f1
+        return auc, f1_micro, f1, f1_macro
 
     def __repr__(self):
         return '{}({}, {}, num_layers={})'.format(self.__class__.__name__,

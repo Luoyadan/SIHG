@@ -65,7 +65,7 @@ if __name__ == "__main__":
         for key, value in trial.params.items():
             print("    {}: {}".format(key, value))
         
-        pickle.dump(study, open("params_bitcoin_alpha_F1.pkl", "wb"))
+        # pickle.dump(study, open("params_bitcoin_alpha_F1.pkl", "wb"))
     else:
         main()
 

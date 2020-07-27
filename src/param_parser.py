@@ -11,7 +11,7 @@ def parameter_parser():
     parser = argparse.ArgumentParser(description="Run SGCN.")
 
     dataset_list = ['bitcoin_alpha', 'bitcoin_otc', 'epinions', 'slashdot']
-    dataset = dataset_list[0]
+    dataset = dataset_list[3]
 
     if 'bitcoin' in dataset:
         edge_path = "../input/" + dataset + ".csv"
@@ -48,7 +48,7 @@ def parameter_parser():
 
     parser.add_argument("--epochs",
                         type=int,
-                        default=900,
+                        default=500,
                         help="Number of training epochs. Default is 100.")
 
     parser.add_argument("--reduction-iterations",
@@ -63,7 +63,7 @@ def parameter_parser():
 
     parser.add_argument("--num_layers",
                         type=int,
-                        default=2)
+                        default=3)
 
     parser.add_argument("--seed",
                         type=int,

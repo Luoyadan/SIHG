@@ -53,9 +53,11 @@ def calculate_auc(targets, predictions, edges):
     neg_ratio = len(edges["negative_edges"])/edges["ecount"]
     targets_rev = [0 if target == 1 else 1 for target in targets] # turn the first indicator (1) to positive
     auc = roc_auc_score(targets_rev, predictions[:, 0])
-    f1 = f1_score(targets_rev, [1 if p > neg_ratio else 0 for p in predictions[:, 0]], average='micro')
+    f1_micro = f1_score(targets_rev, [1 if p > neg_ratio else 0 for p in predictions[:, 0]], average='micro')
+    f1 = f1_score(targets_rev, [1 if p > neg_ratio else 0 for p in predictions[:, 0]])
+    f1_macro = f1_score(targets_rev, [1 if p > neg_ratio else 0 for p in predictions[:, 0]], average='macro')
     # f1 = f1_score(targets, np.argmax(predictions, axis=1))
-    return auc, f1
+    return auc, f1_micro, f1, f1_macro
 
 def score_printer(logs):
     """
@@ -63,7 +65,7 @@ def score_printer(logs):
     :param logs: Log dictionary.
     """
     t = Texttable()
-    t.add_rows([per for i, per in enumerate(logs["performance"]) if i % 10 == 0])
+    t.add_rows([per[:3] for i, per in enumerate(logs["performance"]) if i % 10 == 0])
     print(t.draw())
 
 def save_logs(args, logs):
@@ -76,7 +78,9 @@ def save_logs(args, logs):
     for i, item in enumerate(logs["performance"]):
         if i > 0:
             writer.add_scalar('AUC', item[1], item[0])
-            writer.add_scalar('F1', item[2], item[0])
+            writer.add_scalar('F1_micro', item[2], item[0])
+            writer.add_scalar('F1', item[3], item[0])
+            writer.add_scalar('F1_macro', item[4], item[0])
             writer.add_scalar('Loss', logs["loss"][i-1], item[0])
     writer.close()
     # with open(args.log_path, "w") as f:
