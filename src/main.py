@@ -40,6 +40,7 @@ def main(trial=None):
 
     if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()
+    print('{}{} Val(auc,f1,f1_macro,f1_micro):{} {} {} {}'.format("#" * 10, "BEST EPOCH", trainer.logs["performance"][-1][1], trainer.logs["performance"][-1][3], trainer.logs["performance"][-1][4], trainer.logs["performance"][-1][2]))
     return trainer.logs["performance"][-1][2] #+ trainer.logs["performance"][-1][2]
 
 if __name__ == "__main__":

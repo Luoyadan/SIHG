@@ -154,8 +154,8 @@ class SignedGCNTrainer(object):
         score_negative_edges = torch.from_numpy(np.array(self.test_negative_edges, dtype=np.int64).T).type(torch.long).cuda()
 
         loss, self.z = self.model(self.positive_edges, self.negative_edges, self.y)
-        auc, f1_micro, f1, f1_macro = self.model.aggregator.test(self.z, score_positive_edges, score_negative_edges, self.neg_ratio)
-        self.trial.report(auc, epoch+1)
+        auc, f1, f1_macro, f1_micro = self.model.aggregator.test(self.z, self.positive_edges, self.negative_edges, score_positive_edges, score_negative_edges, self.neg_ratio)
+        # self.trial.report(auc, epoch+1)
         self.logs["performance"].append([epoch+1, auc, f1_micro, f1, f1_macro])
 
     def create_and_train_model(self, trial):
