@@ -100,32 +100,32 @@ class SignedGCNTrainer(object):
         self.negative_edges, self.test_negative_edges = train_test_split(self.edges["negative_edges"],
                                                                          test_size=self.args.test_size,
                                                                          random_state=self.args.seed)
-        with open('slashdot-train-2.edgelist', 'w') as f:
-            for i in self.positive_edges:
-                for j in i:
-                    f.write(str(int(j)))
-                    f.write(' ')
-                f.write('1')
-                f.write('\n')
-            for i in self.negative_edges:
-                for j in i:
-                    f.write(str(int(j)))
-                    f.write(' ')
-                f.write('-1')
-                f.write('\n')
-        with open('slashdot_otc-test-2.edgelist', 'w') as f:
-            for i in self.test_positive_edges:
-                for j in i:
-                    f.write(str(int(j)))
-                    f.write(' ')
-                f.write('1')
-                f.write('\n')
-            for i in self.test_negative_edges:
-                for j in i:
-                    f.write(str(int(j)))
-                    f.write(' ')
-                f.write('-1')
-                f.write('\n')
+        # with open('slashdot-train-2.edgelist', 'w') as f:
+        #     for i in self.positive_edges:
+        #         for j in i:
+        #             f.write(str(int(j)))
+        #             f.write(' ')
+        #         f.write('1')
+        #         f.write('\n')
+        #     for i in self.negative_edges:
+        #         for j in i:
+        #             f.write(str(int(j)))
+        #             f.write(' ')
+        #         f.write('-1')
+        #         f.write('\n')
+        # with open('slashdot_otc-test-2.edgelist', 'w') as f:
+        #     for i in self.test_positive_edges:
+        #         for j in i:
+        #             f.write(str(int(j)))
+        #             f.write(' ')
+        #         f.write('1')
+        #         f.write('\n')
+        #     for i in self.test_negative_edges:
+        #         for j in i:
+        #             f.write(str(int(j)))
+        #             f.write(' ')
+        #         f.write('-1')
+        #         f.write('\n')
         self.ecount = len(self.positive_edges + self.negative_edges)
         self.neg_ratio = len(self.negative_edges) / self.ecount
         self.X = setup_features(self.args,
@@ -154,10 +154,14 @@ class SignedGCNTrainer(object):
         score_negative_edges = torch.from_numpy(np.array(self.test_negative_edges, dtype=np.int64).T).type(torch.long).cuda()
 
         loss, self.z = self.model(self.positive_edges, self.negative_edges, self.y)
-        auc, f1, f1_macro, f1_micro = self.model.aggregator.test(self.z, self.positive_edges, self.negative_edges, score_positive_edges, score_negative_edges, self.neg_ratio)
+        auc, f1, f1_macro, f1_micro = self.model.aggregator.test(self.z, score_positive_edges, score_negative_edges, self.neg_ratio)
         # self.trial.report(auc, epoch+1)
         self.logs["performance"].append([epoch+1, auc, f1_micro, f1, f1_macro])
-
+        print('{}{} Val(auc,f1,f1_macro,f1_micro):{} {} {} {}'.format("#" * 10, "BEST EPOCH",
+                                                                      self.logs["performance"][-1][1],
+                                                                      self.logs["performance"][-1][3],
+                                                                      self.logs["performance"][-1][4],
+                                                                      self.logs["performance"][-1][2]))
     def create_and_train_model(self, trial):
         """
         Model training and scoring.

@@ -26,7 +26,7 @@ def read_graph(args):
     edges["positive_edges"] = [edge[0:2] for edge in dataset if edge[2] == 1]
     edges["negative_edges"] = [edge[0:2] for edge in dataset if edge[2] == -1]
     edges["ecount"] = len(dataset)
-    edges["ncount"] = len(set([edge[0] for edge in dataset]+[edge[1] for edge in dataset]))
+    edges["ncount"] = max(len(set([edge[0] for edge in dataset]+[edge[1] for edge in dataset])), max(dataset)[0]+1)
     return edges
 
 def tab_printer(args):
@@ -125,7 +125,7 @@ def create_spectral_features(args, pos_edge_index, neg_edge_index,
     pos_edge_index = torch.tensor(pos_edge_index).t().long()
     neg_edge_index = torch.tensor(neg_edge_index).t().long()
     edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
-    N = edge_index.max().item() + 1 # if num_nodes is None else num_nodes
+    N = edge_index.max().item() + 1 if num_nodes is None else num_nodes
     edge_index = edge_index.to(torch.device('cpu')).long()
 
     pos_val = torch.full((pos_edge_index.size(1), ), 2, dtype=torch.float)
@@ -246,7 +246,8 @@ class Arcosh(torch.autograd.Function):
         x = x.clamp(min=1.0 + 1e-15)
         ctx.save_for_backward(x)
         z = x.double()
-        return (z + torch.sqrt_(z.pow(2) - 1)).clamp_min_(1e-15).log_().to(x.dtype)
+        z = (z + torch.sqrt_(z.pow(2) - 1)).clamp_min_(1e-15).log_().to(x.dtype)
+        return z
 
     @staticmethod
     def backward(ctx, grad_output):

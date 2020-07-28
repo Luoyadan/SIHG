@@ -11,8 +11,8 @@ import optuna
 import pickle
 
 # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
-print('ok')
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 def main(trial=None):
     """
     Parsing command line parameters.
@@ -41,7 +41,7 @@ def main(trial=None):
 
     if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()
-    print('{}{} Val(auc,f1,f1_macro,f1_micro):{} {} {} {}'.format("#" * 10, "BEST EPOCH", trainer.logs["performance"][-1][1], trainer.logs["performance"][-1][3], trainer.logs["performance"][-1][4], trainer.logs["performance"][-1][2]))
+
     return trainer.logs["performance"][-1][2] #+ trainer.logs["performance"][-1][2]
 
 if __name__ == "__main__":

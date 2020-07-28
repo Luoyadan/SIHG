@@ -12,6 +12,11 @@ from torch_geometric.utils import (negative_sampling,
                                    structured_negative_sampling)
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 import numpy as np
+import warnings
+warnings.filterwarnings('always')
+warnings.simplefilter("ignore")
+warnings.simplefilter('always')
+
 class SignedGCN(torch.nn.Module):
     r"""The signed graph convolutional network model from the `"Signed Graph
     Convolutional Network" <https://arxiv.org/abs/1808.06354>`_ paper.
@@ -107,9 +112,10 @@ class SignedGCN(torch.nn.Module):
 
         # if feat is True:
         #     return self.manifolds.logmap0(torch.cat([z[edge_index[0]], z[edge_index[1]]], dim=1), c=1.0)
-
-        return torch.clamp_min(1. / (torch.exp((self.manifolds.sqdist(z[edge_index[0]], z[edge_index[1]], 1) - self.r) / self.t) + 1.0), 0)
-
+        z = z.cpu()
+        out = torch.clamp_min(1. / (torch.exp((self.manifolds.sqdist(z[edge_index[0]], z[edge_index[1]], 1) - self.r) / self.t) + 1.0), 0)
+        del z
+        return out.cuda()
     def mutual_loss(self, z, pos_edge_index, neg_edge_index):
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
         none_edge_index = negative_sampling(edge_index, z.size(0))
@@ -205,21 +211,21 @@ class SignedGCN(torch.nn.Module):
         # gamma = self.trial.suggest_uniform("gamma", 0, 3)
 
         # OTC-best
-        # alpha = 0.65
-        # beta = 0.82
-        # gamma = 1.88
+        alpha = 0.65
+        beta = 0.82
+        gamma = 1.88
 
-        alpha = 0.64
-        beta = 0.83
-        gamma = 2.39
+        # alpha = 0.64
+        # beta = 0.83
+        # gamma = 2.39
         mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
         # orth_loss = self.orth_loss(device)
         nll_loss = self.nll_loss(z, pos_edge_index, neg_edge_index)
-        loss_1 = self.pos_embedding_loss(z, pos_edge_index)
-        loss_2 = self.neg_embedding_loss(z, neg_edge_index)
-        return nll_loss + alpha * loss_1 + beta * loss_2 + gamma * mutual_info_loss
+        # loss_1 = self.pos_embedding_loss(z, pos_edge_index)
+        # loss_2 = self.neg_embedding_loss(z, neg_edge_index)
+        return nll_loss + gamma * mutual_info_loss #+ alpha * loss_1 + beta * loss_2
 
-    def test(self, z, pos_edges, neg_edges, pos_edge_index, neg_edge_index, neg_ratio):
+    def test(self, z, pos_edge_index, neg_edge_index, neg_ratio):
         """Evaluates node embeddings :obj:`z` on positive and negative test
         edges by computing AUC and F1 scores.
 
