@@ -10,11 +10,12 @@ import torch.nn.init as init
 from torch.nn import Parameter
 from torch_scatter import scatter_add
 from torch_sparse import SparseTensor, matmul, fill_diag, sum, mul_
-from torch_geometric.nn.conv import MessagePassing
+# from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import add_remaining_self_loops
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_geometric.utils import softmax
 from torch_geometric.nn.inits import glorot
+
 class SignedConv(MessagePassing):
     r"""The signed graph convolutional operator from the `"Signed Graph
     Convolutional Network" <https://arxiv.org/abs/1808.06354>`_ paper

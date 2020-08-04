@@ -44,6 +44,7 @@ class SignedGCN(torch.nn.Module):
         self.lamb = lamb
         self.args = args
         self.manifolds = getattr(manifolds, args.manifolds)()
+
         if self.manifolds.name == 'Hyperboloid':
             in_channels = in_channels + 1
         self.conv1 = SignedConv(in_channels, hidden_channels, self.manifolds,
@@ -100,7 +101,7 @@ class SignedGCN(torch.nn.Module):
             z = conv(z, pos_edge_index, neg_edge_index)
         return z
 
-    def discriminate(self, z, edge_index, id=None, feat=False):
+    def discriminate(self, z, edge_index, id=None, last=False):
         """Given node embeddings :obj:`z`, classifies the link relation
         between node pairs :obj:`edge_index` to be either positive,
         negative or non-existent.
@@ -112,10 +113,11 @@ class SignedGCN(torch.nn.Module):
 
         # if feat is True:
         #     return self.manifolds.logmap0(torch.cat([z[edge_index[0]], z[edge_index[1]]], dim=1), c=1.0)
-        z = z.cpu()
+        # z = z.cpu()
         out = torch.clamp_min(1. / (torch.exp((self.manifolds.sqdist(z[edge_index[0]], z[edge_index[1]], 1) - self.r) / self.t) + 1.0), 0)
         del z
-        return out.cuda()
+        return out
+
     def mutual_loss(self, z, pos_edge_index, neg_edge_index):
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
         none_edge_index = negative_sampling(edge_index, z.size(0))
@@ -211,21 +213,21 @@ class SignedGCN(torch.nn.Module):
         # gamma = self.trial.suggest_uniform("gamma", 0, 3)
 
         # OTC-best
-        alpha = 0.65
-        beta = 0.82
-        gamma = 1.88
+        # alpha = 0.65
+        # beta = 0.82
+        # gamma = 1.88
 
-        # alpha = 0.64
-        # beta = 0.83
-        # gamma = 2.39
+        alpha = 0.64
+        beta = 0.831
+        gamma = 1.88
         mutual_info_loss = self.mutual_loss(z, pos_edge_index, neg_edge_index)
         # orth_loss = self.orth_loss(device)
         nll_loss = self.nll_loss(z, pos_edge_index, neg_edge_index)
-        # loss_1 = self.pos_embedding_loss(z, pos_edge_index)
-        # loss_2 = self.neg_embedding_loss(z, neg_edge_index)
-        return nll_loss + gamma * mutual_info_loss #+ alpha * loss_1 + beta * loss_2
+        loss_1 = self.pos_embedding_loss(z, pos_edge_index)
+        loss_2 = self.neg_embedding_loss(z, neg_edge_index)
+        return nll_loss + alpha * loss_1 + beta * loss_2 + gamma * mutual_info_loss
 
-    def test(self, z, pos_edge_index, neg_edge_index, neg_ratio):
+    def test(self, z, pos_edge_index, neg_edge_index, neg_ratio, last=False):
         """Evaluates node embeddings :obj:`z` on positive and negative test
         edges by computing AUC and F1 scores.
 
@@ -234,24 +236,7 @@ class SignedGCN(torch.nn.Module):
             pos_edge_index (LongTensor): The positive edge indices.
             neg_edge_index (LongTensor): The negative edge indices.
         """
-        # with torch.no_grad():
-        #     pos_p = self.discriminate(z, pos_edges, feat=True).cpu().numpy()
-        #     neg_p = self.discriminate(z, neg_edges, feat=True).cpu().numpy()
-        #     test_pos_p = self.discriminate(z, pos_edge_index, feat=True).cpu().numpy()
-        #     test_neg_p = self.discriminate(z, neg_edge_index, feat=True).cpu().numpy()
-        #
-        # p = np.concatenate((pos_p, neg_p))
-        # p_test = np.concatenate((test_pos_p, test_neg_p))
-        # y = np.concatenate((np.ones(pos_edges.size()[1]), np.zeros(neg_edges.size()[1])))
-        # test_y = np.concatenate((np.ones(pos_edge_index.size()[1]), np.zeros(neg_edge_index.size()[1])))
-        # lr = LogisticRegression(solver='lbfgs', max_iter=7600)
-        # lr.fit(p, y)
-        # test_y_score = lr.predict_proba(p_test)[:,1]
-        # test_y_pred = lr.predict(p_test)
-        # auc = roc_auc_score(test_y, test_y_score)
-        # f1_micro = f1_score(test_y, test_y_pred, average='micro')
-        # f1 = f1_score(test_y, test_y_pred)
-        # f1_macro = f1_score(test_y, test_y_pred, average='macro')
+
         with torch.no_grad():
             pos_p = self.discriminate(z, pos_edge_index)
             neg_p = self.discriminate(z, neg_edge_index)

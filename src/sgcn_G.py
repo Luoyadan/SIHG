@@ -12,6 +12,8 @@ from torch_geometric.nn import MessagePassing
 from signed_gcn import SignedGCN
 import matplotlib.pyplot as plt
 
+from tensorboardX import SummaryWriter
+import datetime
 
 
 class SignedGraphConvolutionalNetwork(torch.nn.Module):
@@ -88,6 +90,8 @@ class SignedGCNTrainer(object):
         self.logs["loss"] = []
         self.logs["performance"] = [["Epoch", "AUC", "F1"]]
         self.logs["training_time"] = [["Epoch", "Seconds"]]
+        self.writer = SummaryWriter(self.args.log_path + self.args.dataset + '_Layer_{}/'.format(self.args.num_layers)+'_{}'.
+                                    format((datetime.datetime.now()).strftime("%Y%m%d%H%M%S")))
 
     def setup_dataset(self):
         """
@@ -100,34 +104,9 @@ class SignedGCNTrainer(object):
         self.negative_edges, self.test_negative_edges = train_test_split(self.edges["negative_edges"],
                                                                          test_size=self.args.test_size,
                                                                          random_state=self.args.seed)
-        # with open('slashdot-train-2.edgelist', 'w') as f:
-        #     for i in self.positive_edges:
-        #         for j in i:
-        #             f.write(str(int(j)))
-        #             f.write(' ')
-        #         f.write('1')
-        #         f.write('\n')
-        #     for i in self.negative_edges:
-        #         for j in i:
-        #             f.write(str(int(j)))
-        #             f.write(' ')
-        #         f.write('-1')
-        #         f.write('\n')
-        # with open('slashdot_otc-test-2.edgelist', 'w') as f:
-        #     for i in self.test_positive_edges:
-        #         for j in i:
-        #             f.write(str(int(j)))
-        #             f.write(' ')
-        #         f.write('1')
-        #         f.write('\n')
-        #     for i in self.test_negative_edges:
-        #         for j in i:
-        #             f.write(str(int(j)))
-        #             f.write(' ')
-        #         f.write('-1')
-        #         f.write('\n')
         self.ecount = len(self.positive_edges + self.negative_edges)
         self.neg_ratio = len(self.negative_edges) / self.ecount
+
         self.X = setup_features(self.args,
                                 self.positive_edges,
                                 self.negative_edges,
@@ -144,24 +123,41 @@ class SignedGCNTrainer(object):
         self.X = self.X.cuda()
 
 
-    def score_model(self, epoch):
+    def score_model(self, epoch, last=False):
         """
         Score the model on the test set edges in each epoch.
         :param epoch: Epoch number.
         """
-
+        self.model.eval()
         score_positive_edges = torch.from_numpy(np.array(self.test_positive_edges, dtype=np.int64).T).type(torch.long).cuda()
         score_negative_edges = torch.from_numpy(np.array(self.test_negative_edges, dtype=np.int64).T).type(torch.long).cuda()
 
         loss, self.z = self.model(self.positive_edges, self.negative_edges, self.y)
-        auc, f1, f1_macro, f1_micro = self.model.aggregator.test(self.z, score_positive_edges, score_negative_edges, self.neg_ratio)
+        auc, f1, f1_macro, f1_micro = self.model.aggregator.test(self.z, score_positive_edges, score_negative_edges, self.neg_ratio, last)
         # self.trial.report(auc, epoch+1)
         self.logs["performance"].append([epoch+1, auc, f1_micro, f1, f1_macro])
+        self.writer.add_scalar('AUC', auc, epoch)
+        self.writer.add_scalar('F1', f1, epoch)
+        self.writer.add_scalar('F1_macro', f1_macro, epoch)
+        self.writer.add_scalar('F1_micro', f1_micro, epoch)
+        if last:
+            embedding_pos = torch.cat([self.z[score_positive_edges[0]], self.z[score_positive_edges[1]]], dim=1).cpu()
+            embedding_neg = torch.cat([self.z[score_negative_edges[0]], self.z[score_negative_edges[1]]], dim=1).cpu()
+            embedding = torch.cat([embedding_pos, embedding_neg], dim=0)
+            y = torch.cat(
+                [embedding.new_ones((score_positive_edges.size(1))),
+                 -1*embedding.new_ones(score_negative_edges.size(1))])
+            embedding, y = embedding.detach().numpy(), y.int().numpy()
+            self.writer.add_embedding(embedding, metadata=y, global_step=epoch)
+            self.writer.close()
+
         print('{}{} Val(auc,f1,f1_macro,f1_micro):{} {} {} {}'.format("#" * 10, "BEST EPOCH",
                                                                       self.logs["performance"][-1][1],
                                                                       self.logs["performance"][-1][3],
                                                                       self.logs["performance"][-1][4],
                                                                       self.logs["performance"][-1][2]))
+
+        self.model.train()
     def create_and_train_model(self, trial):
         """
         Model training and scoring.
@@ -173,6 +169,7 @@ class SignedGCNTrainer(object):
                                           lr=self.args.learning_rate,
                                           weight_decay=self.args.weight_decay)
         self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, self.args.epochs)
+        last = False
         self.model.train()
         self.epochs = trange(self.args.epochs, desc="Loss")
 
@@ -187,7 +184,9 @@ class SignedGCNTrainer(object):
             self.lr_scheduler.step()
             self.logs["training_time"].append([epoch+1, time.time()-start_time])
             if self.args.test_size > 0:
-                self.score_model(epoch)
+                if epoch == self.args.epochs -1:
+                    last = True
+                self.score_model(epoch, last)
 
     def save_model(self):
         """

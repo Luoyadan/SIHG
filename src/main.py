@@ -34,10 +34,10 @@ def main(trial=None):
     trainer.setup_dataset()
     trainer.create_and_train_model(trial)
 
-    if args.test_size > 0:
-        trainer.save_model()
-        score_printer(trainer.logs)
-        save_logs(args, trainer.logs)
+    # if args.test_size > 0:
+    #     trainer.save_model()
+    #     score_printer(trainer.logs)
+        # save_logs(args, trainer.logs)
 
     if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()

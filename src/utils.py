@@ -74,7 +74,6 @@ def save_logs(args, logs):
     :param args: Arguments objects.
     :param logs: Log dictionary.
     """
-    writer = SummaryWriter(args.log_path + args.dataset + '_Layer_{}/'.format(args.num_layers)+'_{}'.format((datetime.datetime.now()).strftime("%Y%m%d%H%M%S")))
     for i, item in enumerate(logs["performance"]):
         if i > 0:
             writer.add_scalar('AUC', item[1], item[0])
