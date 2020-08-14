@@ -26,5 +26,5 @@ torchvision       0.3.0
 python src/main.py
 ```
 
-### Visualization
-[visualization](README.html)
+### Visualizations
+
