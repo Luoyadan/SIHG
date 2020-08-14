@@ -27,11 +27,4 @@ python src/main.py
 ```
 
 ### Visualization
-
-<div id="observablehq-4c80bb1e"></div>
-<script type="module">
-import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
-import define from "https://api.observablehq.com/@yadanluo/mobile-patent-suits.js?v=3";
-const inspect = Inspector.into("#observablehq-4c80bb1e");
-(new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
-</script>
+[visualization](README.html)
