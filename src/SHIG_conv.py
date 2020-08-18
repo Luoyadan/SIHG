@@ -33,7 +33,6 @@ class SignedConv(MessagePassing):
         self.heads = args.heads
         self.use_bias = args.use_bias
 
-
         if first_aggr:
             self.lin_pos = Linear(2 * out_channels, out_channels // 2, bias=self.use_bias)
             self.lin_neg = Linear(2 * out_channels, out_channels // 2, bias=self.use_bias)
@@ -59,7 +58,6 @@ class SignedConv(MessagePassing):
             self.bias = nn.Parameter(torch.Tensor(2 * out_channels))
             self.att_i = Parameter(torch.Tensor(1, self.heads, out_channels))
             self.att_j = Parameter(torch.Tensor(1, self.heads, out_channels))
-
 
         self.negative_slope = 0.2
         self.act = F.leaky_relu

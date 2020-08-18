@@ -6,15 +6,9 @@ This is an official PyTorch implementation of paper "Signed Hyperbolic Infomax G
 ## Contents
 * [Requirements](#requirements)
 * [Dataset Preparation](#dataset-preparation)
-  * [Data structure](#data-structure)
-  * [File lists for training/validation](#file-lists-for-trainingvalidation)
-  * [Input data](#input-data)
 * [Usage](#usage)
-  * [Training](#training)
-  * [Testing](#testing)
-* [Options](#options)
-  * [Domain Adaptation](#domain-adaptation)
-  * [More options](#more-options)
+* [Logs](#logs)
+
 
 
 
@@ -41,11 +35,14 @@ tensorboardX      1.8
 Put the edge source files in ./input
 
 
-## Examples
+## Usage
 
+To run SHIG model with the default setting:
 ```
 python src/main.py
 ```
 
-### Visualizations
 
+## Logs
+
+We save the embedding and evaluation scores as scalar in ./src/logs
