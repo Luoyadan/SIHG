@@ -17,76 +17,38 @@ from torch_geometric.utils import softmax
 from torch_geometric.nn.inits import glorot
 
 class SignedConv(MessagePassing):
-    r"""The signed graph convolutional operator from the `"Signed Graph
-    Convolutional Network" <https://arxiv.org/abs/1808.06354>`_ paper
-
-    .. math::
-        \mathbf{x}_v^{(\textrm{pos})} &= \mathbf{\Theta}^{(\textrm{pos})}
-        \left[ \frac{1}{|\mathcal{N}^{+}(v)|} \sum_{w \in \mathcal{N}^{+}(v)}
-        \mathbf{x}_w , \mathbf{x}_v \right]
-
-        \mathbf{x}_v^{(\textrm{neg})} &= \mathbf{\Theta}^{(\textrm{neg})}
-        \left[ \frac{1}{|\mathcal{N}^{-}(v)|} \sum_{w \in \mathcal{N}^{-}(v)}
-        \mathbf{x}_w , \mathbf{x}_v \right]
-
-    if :obj:`first_aggr` is set to :obj:`True`, and
-
-    .. math::
-        \mathbf{x}_v^{(\textrm{pos})} &= \mathbf{\Theta}^{(\textrm{pos})}
-        \left[ \frac{1}{|\mathcal{N}^{+}(v)|} \sum_{w \in \mathcal{N}^{+}(v)}
-        \mathbf{x}_w^{(\textrm{pos})}, \frac{1}{|\mathcal{N}^{-}(v)|}
-        \sum_{w \in \mathcal{N}^{-}(v)} \mathbf{x}_w^{(\textrm{neg})} ,
-        \mathbf{x}_v^{(\textrm{pos})} \right]
-
-        \mathbf{x}_v^{(\textrm{neg})} &= \mathbf{\Theta}^{(\textrm{pos})}
-        \left[ \frac{1}{|\mathcal{N}^{+}(v)|} \sum_{w \in \mathcal{N}^{+}(v)}
-        \mathbf{x}_w^{(\textrm{neg})}, \frac{1}{|\mathcal{N}^{-}(v)|}
-        \sum_{w \in \mathcal{N}^{-}(v)} \mathbf{x}_w^{(\textrm{pos})} ,
-        \mathbf{x}_v^{(\textrm{neg})} \right]
-
-    otherwise.
-    In case :obj:`first_aggr` is :obj:`False`, the layer expects :obj:`x` to be
-    a tensor where :obj:`x[:, :in_channels]` denotes the positive node features
-    :math:`\mathbf{X}^{(\textrm{pos})}` and :obj:`x[:, in_channels:]` denotes
-    the negative node features :math:`\mathbf{X}^{(\textrm{neg})}`.
-
-    Args:
-        in_channels (int): Size of each input sample.
-        out_channels (int): Size of each output sample.
-        first_aggr (bool): Denotes which aggregation formula to use.
-        bias (bool, optional): If set to :obj:`False`, the layer will not learn
-            an additive bias. (default: :obj:`True`)
-        **kwargs (optional): Additional arguments of
-            :class:`torch_geometric.nn.conv.MessagePassing`.
-    """
 
     def __init__(self,
                  in_channels,
                  out_channels,
                  manifolds,
+                 args,
                  first_aggr,
-                 bias=True,
                  **kwargs):
         super(SignedConv, self).__init__(aggr='mean', **kwargs)
 
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.first_aggr = first_aggr
-        self.heads = 1
+        self.heads = args.heads
+        self.use_bias = args.use_bias
+
+
         if first_aggr:
-            self.lin_pos = Linear(2 * out_channels, out_channels // 2, bias=bias)
-            self.lin_neg = Linear(2 * out_channels, out_channels // 2, bias=bias)
-            self.lin_pos_agg = Linear(out_channels, out_channels * self.heads, bias=bias)
-            self.lin_neg_agg = Linear(out_channels, out_channels * self.heads, bias=bias)
+            self.lin_pos = Linear(2 * out_channels, out_channels // 2, bias=self.use_bias)
+            self.lin_neg = Linear(2 * out_channels, out_channels // 2, bias=self.use_bias)
+            self.lin_pos_agg = Linear(out_channels, out_channels * self.heads, bias=self.use_bias)
+            self.lin_neg_agg = Linear(out_channels, out_channels * self.heads, bias=self.use_bias)
         else:
-            self.lin_pos = Linear(3 * out_channels, out_channels, bias=bias)
-            self.lin_neg = Linear(3 * out_channels, out_channels, bias=bias)
-            self.lin_pos_agg = Linear(out_channels, out_channels * self.heads, bias=bias)
-            self.lin_neg_agg = Linear(out_channels, out_channels * self.heads, bias=bias)
+            self.lin_pos = Linear(3 * out_channels, out_channels, bias=self.use_bias)
+            self.lin_neg = Linear(3 * out_channels, out_channels, bias=self.use_bias)
+            self.lin_pos_agg = Linear(out_channels, out_channels * self.heads, bias=self.use_bias)
+            self.lin_neg_agg = Linear(out_channels, out_channels * self.heads, bias=self.use_bias)
 
         self.manifolds = manifolds
-        self.dropout = 0
-        self.c = 1.
+        self.dropout = args.dropout
+        self.c = args.c
+
         if self.first_aggr:
             self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
             self.bias = nn.Parameter(torch.Tensor(out_channels))
@@ -97,7 +59,8 @@ class SignedConv(MessagePassing):
             self.bias = nn.Parameter(torch.Tensor(2 * out_channels))
             self.att_i = Parameter(torch.Tensor(1, self.heads, out_channels))
             self.att_j = Parameter(torch.Tensor(1, self.heads, out_channels))
-        self.use_bias = False
+
+
         self.negative_slope = 0.2
         self.act = F.leaky_relu
         self.reset_parameters()

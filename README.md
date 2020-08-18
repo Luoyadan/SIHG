@@ -34,10 +34,14 @@ torch-sparse      0.6.1
 torch-cluster     1.5.4
 torch-geometric   1.5.0
 torchvision       0.5.0
+tensorboardX      1.8
 ```
 
+## Dataset Preparation
+Put the edge source files in ./input
 
-### Examples
+
+## Examples
 
 ```
 python src/main.py

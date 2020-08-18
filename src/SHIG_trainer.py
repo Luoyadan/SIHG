@@ -3,26 +3,20 @@ import torch
 import torch.nn as nn
 import random
 import numpy as np
-import pandas as pd
 from tqdm import trange
 
 from utils import setup_features
 from sklearn.model_selection import train_test_split
 from torch_geometric.nn import MessagePassing
-from signed_gcn import SignedGCN
+from SHIG import SHIG_Model
 import matplotlib.pyplot as plt
 
 from tensorboardX import SummaryWriter
 import datetime
 
 
-class SignedGraphConvolutionalNetwork(torch.nn.Module):
-    """
-    Signed Graph Convolutional Network Class.
-    For details see: Signed Graph Convolutional Network.
-    Tyler Derr, Yao Ma, and Jiliang Tang ICDM, 2018.
-    https://arxiv.org/abs/1808.06354
-    """
+class SHIGNetwork(torch.nn.Module):
+
     def __init__(self, device, args, trial, X):
         super(SignedGraphConvolutionalNetwork, self).__init__()
         """
@@ -48,7 +42,8 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
         self.neurons = self.args.layers
         self.layers = len(self.neurons)
 
-        self.aggregator = SignedGCN(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers, trial=self.trial, args=self.args).cuda()
+        self.aggregator = SHIG_model(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers,
+                                     trial=self.trial, args=self.args).cuda()
 
 
     def forward(self, positive_edges, negative_edges, target):
@@ -66,19 +61,13 @@ class SignedGraphConvolutionalNetwork(torch.nn.Module):
 
         return loss, self.z
 
-class SignedGCNTrainer(object):
-    """
-    Object to train and score the SGCN, log the model behaviour and save the output.
-    """
+class SHIGTrainer(object):
+
     def __init__(self, args, edges):
-        """
-        Constructing the trainer instance and setting up logs.
-        :param args: Arguments object.
-        :param edges: Edge data structure with positive and negative edges separated.
-        """
+
         self.args = args
         self.edges = edges
-        self.device = torch.device("cuda:1,2" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.setup_logs()
 
     def setup_logs(self):
@@ -90,6 +79,7 @@ class SignedGCNTrainer(object):
         self.logs["loss"] = []
         self.logs["performance"] = [["Epoch", "AUC", "F1"]]
         self.logs["training_time"] = [["Epoch", "Seconds"]]
+        # tensorboard
         self.writer = SummaryWriter(self.args.log_path + self.args.dataset + '_Layer_{}/'.format(self.args.num_layers)+'_{}'.
                                     format((datetime.datetime.now()).strftime("%Y%m%d%H%M%S")))
 
@@ -151,23 +141,26 @@ class SignedGCNTrainer(object):
             self.writer.add_embedding(embedding, metadata=y, global_step=epoch)
             self.writer.close()
 
-        print('{}{} Val(auc,f1,f1_macro,f1_micro):{} {} {} {}'.format("#" * 10, "BEST EPOCH",
+        if self.args.verbose:
+            print('{}{} Val(auc,f1,f1_macro,f1_micro):{} {} {} {}'.format("#" * 10, "BEST EPOCH",
                                                                       self.logs["performance"][-1][1],
                                                                       self.logs["performance"][-1][3],
                                                                       self.logs["performance"][-1][4],
                                                                       self.logs["performance"][-1][2]))
 
         self.model.train()
+
     def create_and_train_model(self, trial):
         """
         Model training and scoring.
         """
         print("\nTraining started.\n")
         self.trial = trial
-        self.model = SignedGraphConvolutionalNetwork(self.device, self.args, trial, self.X).cuda()
+        self.model = SHIGNetwork(self.device, self.args, trial, self.X).cuda()
         self.optimizer = torch.optim.Adam(self.model.parameters(),
                                           lr=self.args.learning_rate,
                                           weight_decay=self.args.weight_decay)
+
         self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, self.args.epochs)
         last = False
         self.model.train()
@@ -179,7 +172,7 @@ class SignedGCNTrainer(object):
             loss, _ = self.model(self.positive_edges, self.negative_edges, self.y)
             self.logs["loss"].append(loss.item())
             loss.backward()
-            self.epochs.set_description("SGCN (Loss=%g)" % round(loss.item(), 4))
+            self.epochs.set_description("SHIG (Loss=%g)" % round(loss.item(), 4))
             self.optimizer.step()
             self.lr_scheduler.step()
             self.logs["training_time"].append([epoch+1, time.time()-start_time])
@@ -187,9 +180,3 @@ class SignedGCNTrainer(object):
                 if epoch == self.args.epochs -1:
                     last = True
                 self.score_model(epoch, last)
-
-    def save_model(self):
-        """
-        Saving the embedding and model weights.
-        """
-        print("\nEmbedding is saved.\n")

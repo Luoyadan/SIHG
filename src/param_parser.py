@@ -2,14 +2,13 @@ import argparse
 
 
 def parameter_parser():
-    """
-    A method to parse up command line parameters.
-    By default it gives an embedding of the Bitcoin OTC dataset.
-    The default hyperparameters give a good quality representation without grid search.
-    Representations are sorted by node ID.
-    """
-    parser = argparse.ArgumentParser(description="Run SGCN.")
+    parser = argparse.ArgumentParser(description="Running for SHIG")
 
+    '''
+    input related
+    '''
+
+    # choosing datasets
     dataset_list = ['bitcoin_alpha', 'bitcoin_otc', 'epinions', 'slashdot']
     dataset = dataset_list[0]
 
@@ -32,24 +31,91 @@ def parameter_parser():
                         default=edge_path,
                         help="Edge list csv.")
 
+    '''
+    output related
+    '''
+
+    # specify the paths to save tensorboard logs
     parser.add_argument("--log_path", type=str, default='./logs/')
 
-    parser.add_argument("--manifolds", type=str, default='Hyperboloid', choices=['Euclidean', 'Hyperboloid', 'PoincareBall'])
+
+    '''
+    model related
+    '''
+
+    parser.add_argument("--manifolds",
+                        type=str,
+                        default='Hyperboloid',
+                        choices=['Euclidean', 'Hyperboloid', 'PoincareBall'],
+                        )
 
     parser.add_argument("--r",
                         type=float,
                         default=2.,
-                        help="fermi-dirac decoder parameter for lp")
+                        help="fermi-dirac decoder parameter")
 
     parser.add_argument("--t",
                         type=float,
                         default=1.,
-                        help="fermi-dirac decoder parameter for lp")
+                        help="fermi-dirac decoder parameter")
+
+    parser.add_argument("--c",
+                        type=float,
+                        default=1.,
+                        help="culvature of the hyperbolic manifold")
+
+    parser.add_argument("--num_layers",
+                        type=int,
+                        default=3,
+                        help='Number of layers for GNNs')
+
+    parser.add_argument("--use_bias",
+                        type=boolean,
+                        default=True)
+
+    parser.add_argument("--heads",
+                        type=int,
+                        default=1,
+                        help='Heads for attention. Default is 1.')
+
+    parser.add_argument("--dropout",
+                        type=float,
+                        default=0)
+
+    '''
+    training related
+    '''
+    parser.add_argument("--test-size",
+                        type=float,
+                        default=0.2,
+                        help="Test dataset size. Default is 0.2.")
+
+    parser.add_argument("--seed",
+                        type=int,
+                        default=42,
+                        help="Random seed for sklearn, random and cuda")
+
 
     parser.add_argument("--epochs",
                         type=int,
                         default=600,
-                        help="Number of training epochs. Default is 100.")
+                        help="Number of training epochs. Default is 900.")
+
+    parser.add_argument("--auto_ml",
+                        type=boolean,
+                        default=True,
+                        help="Use optuna to find best hyperparameters")
+
+    parser.add_argument("--n_trails",
+                        type=int,
+                        default=100,
+                        help="Number of trails to search hyperparameters")
+
+    parser.add_argument("--metric_to_optimize",
+                        type=str,
+                        default='AUC',
+                        choices=['AUC', 'F1'],
+                        )
 
     parser.add_argument("--reduction-iterations",
                         type=int,
@@ -61,24 +127,6 @@ def parameter_parser():
                         default=64,
                         help="Number of SVD feature extraction dimensions. Default is 64.")
 
-    parser.add_argument("--num_layers",
-                        type=int,
-                        default=3)
-
-    parser.add_argument("--seed",
-                        type=int,
-                        default=42,
-                        help="Random seed for sklearn pre-training. Default is 42.")
-
-    parser.add_argument("--lamb",
-                        type=float,
-                        default=1.0,
-                        help="Embedding regularization parameter. Default is 1.0.")
-
-    parser.add_argument("--test-size",
-                        type=float,
-                        default=0.2,
-                        help="Test dataset size. Default is 0.2.")
 
     parser.add_argument("--learning-rate",
                         type=float,
@@ -102,6 +150,11 @@ def parameter_parser():
     parser.add_argument("--general-features",
                         dest="spectral_features",
                         action="store_false")
+
+    parser.add_argument("--verbose",
+                        type=boolean,
+                        default=True,
+                        help="Print test results")
 
     parser.set_defaults(spectral_features=True)
 

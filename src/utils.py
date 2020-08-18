@@ -1,5 +1,3 @@
-"""Data reading utils."""
-
 import json
 import numpy as np
 import pandas as pd
@@ -12,9 +10,9 @@ import scipy
 from torch_sparse import coalesce
 from tensorboardX import SummaryWriter
 import datetime
+
 def read_graph(args):
     """
-    Method to read graph and create a target matrix with pooled adjacency matrix powers.
     :param args: Arguments object.
     :return edges: Edges dictionary.
     """
@@ -31,7 +29,7 @@ def read_graph(args):
 
 def tab_printer(args):
     """
-    Function to print the logs in a nice tabular format.
+    Print the logs in a nice tabular format.
     :param args: Parameters used for the model.
     """
     args = vars(args)
@@ -42,14 +40,6 @@ def tab_printer(args):
     print(t.draw())
 
 def calculate_auc(targets, predictions, edges):
-    """
-    Calculate performance measures on test dataset.
-    :param targets: Target vector to predict.
-    :param predictions: Predictions vector.
-    :param edges: Edges dictionary with number of edges etc.
-    :return auc: AUC value.
-    :return f1: F1-score.
-    """
     neg_ratio = len(edges["negative_edges"])/edges["ecount"]
     targets_rev = [0 if target == 1 else 1 for target in targets] # turn the first indicator (1) to positive
     auc = roc_auc_score(targets_rev, predictions[:, 0])
@@ -82,8 +72,7 @@ def save_logs(args, logs):
             writer.add_scalar('F1_macro', item[4], item[0])
             writer.add_scalar('Loss', logs["loss"][i-1], item[0])
     writer.close()
-    # with open(args.log_path, "w") as f:
-    #     json.dump(logs, f)
+
 
 def setup_features(args, positive_edges, negative_edges, node_count):
     """
@@ -111,7 +100,7 @@ def create_general_features(args):
 
 def create_spectral_features(args, pos_edge_index, neg_edge_index,
                              num_nodes=None):
-    r"""Creates :obj:`in_channels` spectral node features based on
+    """Creates :obj:`in_channels` spectral node features based on
     positive and negative edges.
 
     Args:
@@ -138,8 +127,6 @@ def create_spectral_features(args, pos_edge_index, neg_edge_index,
     edge_index, val = coalesce(edge_index, val, N, N)
     val = val - 1
 
-    # Borrowed from:
-    # https://github.com/benedekrozemberczki/SGCN/blob/master/src/utils.py
     edge_index = edge_index.detach().numpy()
     val = val.detach().numpy()
     A = scipy.sparse.coo_matrix((val, edge_index), shape=(N, N))
@@ -150,42 +137,10 @@ def create_spectral_features(args, pos_edge_index, neg_edge_index,
     x = svd.components_.T
     return torch.from_numpy(x).to(torch.float).to(pos_edge_index.device)
 
-# def create_spectral_features(args, positive_edges, negative_edges, node_count):
-#     """
-#     Creating spectral node features using the train dataset edges.
-#     :param args: Arguments object.
-#     :param positive_edges: Positive edges list.
-#     :param negative_edges: Negative edges list.
-#     :param node_count: Number of nodes.
-#     :return X: Node features.
-#     """
-#     dec = 'TSVD' # 'KPCA'
-#     p_edges = positive_edges + [[edge[1], edge[0]] for edge in positive_edges]
-#     n_edges = negative_edges + [[edge[1], edge[0]] for edge in negative_edges]
-#     train_edges = p_edges + n_edges
-#     index_1 = [edge[0] for edge in train_edges]
-#     index_2 = [edge[1] for edge in train_edges]
-#     values = [1]*len(p_edges) + [-1]*len(n_edges)
-#     shaping = (node_count, node_count)
-#     signed_A = sparse.csr_matrix(sparse.coo_matrix((values, (index_1, index_2)),
-#                                                    shape=shaping,
-#                                                    dtype=np.float32))
-#
-#     if dec == 'TSVD':
-#         svd = TruncatedSVD(n_components=args.reduction_dimensions,
-#                            n_iter=args.reduction_iterations,
-#                            random_state=args.seed)
-#         svd.fit(signed_A)
-#         X = svd.components_.T
-#
-#     elif dec == 'KPCA':
-#         transformer = KernelPCA(n_components=args.reduction_dimensions,
-#                                 kernel='rbf',
-#                                 random_state=args.seed)
-#         X = transformer.fit_transform(signed_A)
-#     return X
-"""Math utils functions."""
 
+'''
+Math functions for Hyperbolic
+'''
 
 
 def cosh(x, clamp=15):
