@@ -1,6 +1,6 @@
-Anonymous Submission ID 43 for WSDM 2021
+Anonymous Submission ID 1326 for WWW 2021
 ============================================
-This is an official PyTorch implementation of paper "Signed Hyperbolic Infomax Graph Network for Interpretable Signed Link Prediction"
+This is an official PyTorch implementation of paper "Interpretable Signed Link Prediction with Signed Infomax Hyperbolic Graph"
 
 
 ## Contents
@@ -37,7 +37,7 @@ Put the edge source files in ./input
 
 ## Usage
 
-To run SHIG model with the default setting:
+To run SIHG model with the default setting:
 ```
 python src/main.py
 ```
