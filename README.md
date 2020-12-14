@@ -1,5 +1,3 @@
-Anonymous Submission ID 1326 for WWW 2021
-============================================
 This is an official PyTorch implementation of paper "Interpretable Signed Link Prediction with Signed Infomax Hyperbolic Graph"
 
 
