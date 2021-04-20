@@ -5,8 +5,5 @@ src/params_bitcoin_alpha_F1.pkl
 
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-
-
- 
+#.idea/
+#__pycache__/
