@@ -66,12 +66,12 @@ def parameter_parser():
 
     parser.add_argument("--num_layers",
                         type=int,
-                        default=3,
+                        default=2,
                         help='Number of layers for GNNs')
 
     parser.add_argument("--use_bias",
-                        type=boolean,
-                        default=True)
+                        type=bool,
+                        default=False)
 
     parser.add_argument("--heads",
                         type=int,
@@ -102,7 +102,7 @@ def parameter_parser():
                         help="Number of training epochs. Default is 900.")
 
     parser.add_argument("--auto_ml",
-                        type=boolean,
+                        type=bool,
                         default=True,
                         help="Use optuna to find best hyperparameters")
 
@@ -152,7 +152,7 @@ def parameter_parser():
                         action="store_false")
 
     parser.add_argument("--verbose",
-                        type=boolean,
+                        type=bool,
                         default=True,
                         help="Print test results")
 

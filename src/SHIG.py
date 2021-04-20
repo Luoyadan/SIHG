@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_sparse import coalesce
-from signed_conv import SignedConv
+from SHIG_conv import SignedConv
 import manifolds
 from torch_geometric.utils import (negative_sampling,
                                    structured_negative_sampling)
@@ -18,7 +18,7 @@ warnings.simplefilter('always')
 
 class MutualInfoNet(torch.nn.Module):
     def __init__(self, hidden_channels):
-        super(InfoNet, self).__init__()
+        super(MutualInfoNet, self).__init__()
         self.fc_x = nn.Linear(hidden_channels, hidden_channels)
         self.fc_y = nn.Linear(1, hidden_channels)
         self.fc = nn.Linear(hidden_channels, 1)
@@ -39,7 +39,7 @@ class SHIG_Model(torch.nn.Module):
 
     def __init__(self, in_channels, hidden_channels, num_layers, lamb=1, trial=None, args=None,
                  bias=True):
-        super(SignedGCN, self).__init__()
+        super(SHIG_Model, self).__init__()
 
         self.in_channels = in_channels
         self.hidden_channels = hidden_channels

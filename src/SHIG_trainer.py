@@ -18,7 +18,7 @@ import datetime
 class SHIGNetwork(torch.nn.Module):
 
     def __init__(self, device, args, trial, X):
-        super(SignedGraphConvolutionalNetwork, self).__init__()
+        super(SHIGNetwork, self).__init__()
         """
         SGCN Initialization.
         :param device: Device for calculations.
@@ -42,7 +42,7 @@ class SHIGNetwork(torch.nn.Module):
         self.neurons = self.args.layers
         self.layers = len(self.neurons)
 
-        self.aggregator = SHIG_model(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers,
+        self.aggregator = SHIG_Model(self.X.shape[1], self.neurons[-1], num_layers=self.args.num_layers,
                                      trial=self.trial, args=self.args).cuda()
 
 

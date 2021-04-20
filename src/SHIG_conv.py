@@ -1,7 +1,7 @@
 import torch
 import math
 from torch.nn import Linear
-from message_passing import MessagePassing
+# from message_passing import MessagePassing
 
 import torch
 import torch.nn as nn
@@ -10,7 +10,7 @@ import torch.nn.init as init
 from torch.nn import Parameter
 from torch_scatter import scatter_add
 from torch_sparse import SparseTensor, matmul, fill_diag, sum, mul_
-# from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import add_remaining_self_loops
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_geometric.utils import softmax
@@ -88,7 +88,7 @@ class SignedConv(MessagePassing):
             res = x
         if torch.isnan(res).any():
             print("check here")
-        assert not torch.isnan(res).any()
+        # assert not torch.isnan(res).any()
         if self.use_bias:
             bias = self.manifolds.proj_tan0(self.bias.view(1, -1), self.c)
             hyp_bias = self.manifolds.expmap0(bias, self.c)
@@ -96,7 +96,7 @@ class SignedConv(MessagePassing):
             res = self.manifolds.mobius_add(res, hyp_bias, c=self.c)
             res = self.manifolds.proj(res, self.c)
         torch.cuda.empty_cache()
-        x = (self.manifolds.logmap0(res, c=self.c)).cuda()
+        x = (self.manifolds.logmap0(res, c=self.c)).cuda() + 1e-15
 
         if self.first_aggr:
             if self.manifolds.name == 'Hyperboloid':
@@ -132,6 +132,9 @@ class SignedConv(MessagePassing):
                 self.propagate(neg_edge_index, x=(self.lin_neg_agg(x_1), self.lin_neg_agg(x_1)), size=None, return_attention_weights=return_attention_weights),
                 x_2,
             ], dim=1)
+        # to ensure numetrical stable
+        x_pos = x_pos + 1e-15
+        x_neg = x_neg + 1e-15
         assert not torch.isnan(x_pos).any()
         assert not torch.isnan(x_neg).any()
         x_pos = self.manifolds.proj(self.manifolds.expmap0(self.lin_pos(x_pos), c=self.c), c=self.c)
@@ -158,7 +161,7 @@ class SignedConv(MessagePassing):
 
         alpha = (x_i * self.att_i).sum(-1) + (x_j * self.att_j).sum(-1)
         alpha = F.leaky_relu(alpha, self.negative_slope)
-        alpha = 2 * softmax(alpha, edge_index_i, size_i) - 1
+        alpha = 2 * softmax(src=alpha, index=edge_index_i.long(), num_nodes=size_i) - 1
 
         if return_attention_weights:
             self.__alpha__ = alpha

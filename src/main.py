@@ -7,11 +7,14 @@ import numpy as np
 import random
 import optuna
 import pickle
-
+import warnings
+warnings.filterwarnings('always')
+warnings.simplefilter("ignore")
+warnings.simplefilter('always')
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
-def main(args, trial=None):
+def main(trial=None, args=None):
     """
     Parsing command line parameters.
     Creating target matrix.
@@ -50,7 +53,7 @@ if __name__ == "__main__":
         study = optuna.create_study(direction="maximize")
 
         # number of trials
-        study.optimize(main, args, n_trials=100)
+        study.optimize(lambda trial: main(trial, args), n_trials=100)
         pruned_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]
         complete_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
 
